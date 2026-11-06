@@ -1,12 +1,3 @@
-# Spec Kit / AI agent artifacts
-.github/agents/
-.github/.agents/
-.github/agent/
-.github/copilot/
-.github/prompts/
-.specify/
-.specs/
-
 # OS
 .DS_Store
 Thumbs.db
@@ -21,9 +12,25 @@ node_modules/
 out/
 playwright-report/
 test-results/
+tests/db/generated/
 
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Other
+.github/agents/
+.github/.agents/
+.github/agent/
+.github/copilot/
+.github/prompts/
+.specify/
+.specs/
+checklist/
+AGENTS.md

@@ -1,0 +1,15 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model TransactionSpike {
+  id     String @id
+  status String
+
+  @@map("countersign_transaction_spike")
+}
