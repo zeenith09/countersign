@@ -3,6 +3,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client";
+import { assertSpikeTarget } from "./spike-target";
 
 const transactionOptions = { maxWait: 15_000, timeout: 30_000 };
 
@@ -151,6 +152,7 @@ export async function runSpike() {
   const variable = mode === "direct" ? "SPIKE_DIRECT_URL" : "SPIKE_DATABASE_URL";
   const connectionString = process.env[variable];
   if (!connectionString) throw new Error(`${variable} must point to the spike branch.`);
+  assertSpikeTarget(connectionString, variable);
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString }, { schema: "public" }),
   });

@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PrismaClient } from "./generated/client";
+import { assertSpikeTarget } from "./spike-target";
 
 const transactionOptions = { maxWait: 15_000, timeout: 30_000 };
 const testTimeout = 45_000;
@@ -28,6 +29,7 @@ async function createClient() {
   if (!connectionString) {
     throw new Error(`${variable} must point to the disposable spike branch.`);
   }
+  assertSpikeTarget(connectionString, variable);
   const { PrismaClient } = await import("./generated/client");
   return new PrismaClient({
     adapter: new PrismaPg({ connectionString }, { schema: "public" }),
@@ -61,6 +63,7 @@ describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres transaction s
   }, testTimeout);
 
   it("commits successful transactions and rolls back a thrown error", async () => {
+    // A transaction resolving alone could hide a missing rollback; verify both rows afterward.
     const committedId = randomUUID();
     const rolledBackId = randomUUID();
     const deliberateError = new Error("deliberate rollback");
@@ -84,6 +87,7 @@ describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres transaction s
   }, testTimeout);
 
   it("holds the same advisory transaction lock in only one transaction at a time", async () => {
+    // Distinct backend PIDs and an observed pg_locks wait rule out same-connection serialization.
     const lockKey = BigInt(randomInt(1, 2_147_483_647));
     const firstHasLock = barrier();
     const releaseFirst = barrier();
@@ -130,7 +134,41 @@ describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres transaction s
     console.info(`Advisory lock: backend ${secondPid} waited ${elapsedMs.toFixed(1)} ms`);
   }, testTimeout);
 
+  it("detects overlapping transactions when the advisory lock is omitted", async () => {
+    // This negative control proves the overlap measurement detects the unlocked case.
+    const bothEntered = barrier();
+    const releaseTransactions = barrier();
+    let entered = 0;
+    let active = 0;
+    let peakActive = 0;
+    const backendPids: number[] = [];
+
+    const runUnlockedTransaction = () =>
+      prisma.$transaction(async (tx) => {
+        const [row] = await tx.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`;
+        backendPids.push(row.pid);
+        active += 1;
+        peakActive = Math.max(peakActive, active);
+        entered += 1;
+        if (entered === 2) bothEntered.release();
+        await releaseTransactions.promise;
+        active -= 1;
+      }, transactionOptions);
+
+    const transactions = Promise.all([runUnlockedTransaction(), runUnlockedTransaction()]);
+    try {
+      await Promise.race([bothEntered.promise, transactions]);
+      expect(new Set(backendPids).size).toBe(2);
+      expect(peakActive).toBe(2);
+    } finally {
+      releaseTransactions.release();
+      await transactions;
+    }
+  }, testTimeout);
+
   it("allows only the first concurrent conditional update to claim a pending row", async () => {
+    // Counts [1, 0] alone could pass sequentially; distinct PIDs and an observed row-lock wait
+    // prove the second update contended while the first transaction was still open.
     const id = randomUUID();
     await prisma.transactionSpike.create({ data: { id, status: "pending" } });
     const firstUpdated = barrier();
@@ -178,6 +216,7 @@ describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres transaction s
   }, testTimeout);
 
   it("uses read committed isolation inside an interactive transaction", async () => {
+    // Query inside the interactive transaction so a default outside it cannot mask drift.
     const isolation = await prisma.$transaction(async (tx) => {
       const [row] = await tx.$queryRaw<{ transaction_isolation: string }[]>`
         SHOW transaction_isolation

@@ -12,14 +12,21 @@ if (process.env.RUN_DB_SPIKE !== "1") fail("set RUN_DB_SPIKE=1 to opt in.");
 const connectionString = process.env.SPIKE_DIRECT_URL;
 if (!connectionString) fail("SPIKE_DIRECT_URL is not set.");
 
-let host;
+let hostname;
 try {
-  host = new URL(connectionString).hostname;
+  hostname = new URL(connectionString).hostname.toLowerCase();
 } catch {
   fail("SPIKE_DIRECT_URL is not a valid URL.");
 }
-// A URL cannot prove which branch it targets; this only rejects pooled or non-Neon hosts.
-if (!host.endsWith(".neon.tech") || host.includes("-pooler.")) {
+if (!hostname.endsWith(".neon.tech")) {
+  fail("SPIKE_DIRECT_URL must use a Neon endpoint.");
+}
+const normalizedHostname = hostname.replace(/-pooler(?=\.)/, "");
+const endpointId = normalizedHostname.split(".")[0];
+if (endpointId !== "ep-winter-wave-b5uo4p26") {
+  fail(`SPIKE_DIRECT_URL resolves to endpoint ${endpointId}; expected spike endpoint ep-winter-wave-b5uo4p26.`);
+}
+if (hostname.includes("-pooler.")) {
   fail("SPIKE_DIRECT_URL must be a direct (non-pooled) Neon host.");
 }
 
