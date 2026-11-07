@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:seed": "jiti prisma/seed.ts",
     "test": "vitest run",
     "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts"
   },
