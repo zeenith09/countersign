@@ -8,4 +8,7 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Action'
+export type * from './models/Decision'
+export type * from './models/AuditLog'
 export type * from './commonInputTypes'

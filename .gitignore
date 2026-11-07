@@ -33,4 +33,5 @@ pnpm-debug.log*
 .specify/
 .specs/
 checklist/
+notes/
 AGENTS.md

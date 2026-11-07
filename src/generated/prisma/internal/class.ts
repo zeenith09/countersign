@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.10.1",
   "engineVersion": "d1b3f377ca835d73fd50954a5e22128b9ebdd6b8",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum ActionStatus {\n  pending\n  approved\n  denied\n  auto_allowed\n  blocked\n\n  @@map(\"action_status\")\n}\n\nenum DecisionOutcome {\n  approved\n  denied\n\n  @@map(\"decision_outcome\")\n}\n\nmodel Action {\n  id                String       @id @default(uuid()) @db.Uuid\n  agentId           String       @map(\"agent_id\")\n  tool              String\n  parameters        Json         @db.JsonB\n  agentReasoning    String       @map(\"agent_reasoning\") @db.Text\n  status            ActionStatus @default(pending)\n  policyRuleMatched String?      @map(\"policy_rule_matched\")\n  createdAt         DateTime     @default(now()) @map(\"created_at\") @db.Timestamptz(6)\n  decision          Decision?\n\n  @@index([status, createdAt])\n  @@index([agentId, createdAt])\n  @@map(\"actions\")\n}\n\nmodel Decision {\n  id               String          @id @default(uuid()) @db.Uuid\n  actionId         String          @unique @map(\"action_id\") @db.Uuid\n  reviewer         String\n  outcome          DecisionOutcome\n  reason           String          @db.Text\n  editedParameters Json?           @map(\"edited_parameters\") @db.JsonB\n  decidedAt        DateTime        @default(now()) @map(\"decided_at\") @db.Timestamptz(6)\n  action           Action          @relation(fields: [actionId], references: [id], onDelete: Restrict)\n\n  @@index([reviewer, decidedAt])\n  @@map(\"decisions\")\n}\n\nmodel AuditLog {\n  id        String   @id @default(uuid()) @db.Uuid\n  sequence  BigInt   @unique\n  eventType String   @map(\"event_type\")\n  payload   Json     @db.JsonB\n  prevHash  String?  @map(\"prev_hash\") @db.Char(64)\n  hash      String   @db.Char(64)\n  createdAt DateTime @default(now()) @map(\"created_at\") @db.Timestamptz(6)\n\n  @@index([eventType, createdAt])\n  @@map(\"audit_log\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -32,10 +32,10 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Action\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"tool\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parameters\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"agentReasoning\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_reasoning\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ActionStatus\"},{\"name\":\"policyRuleMatched\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"policy_rule_matched\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"decision\",\"kind\":\"object\",\"type\":\"Decision\",\"relationName\":\"ActionToDecision\"}],\"dbName\":\"actions\",\"schema\":null},\"Decision\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"actionId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"action_id\"},{\"name\":\"reviewer\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"outcome\",\"kind\":\"enum\",\"type\":\"DecisionOutcome\"},{\"name\":\"reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"editedParameters\",\"kind\":\"scalar\",\"type\":\"Json\",\"dbName\":\"edited_parameters\"},{\"name\":\"decidedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"decided_at\"},{\"name\":\"action\",\"kind\":\"object\",\"type\":\"Action\",\"relationName\":\"ActionToDecision\"}],\"dbName\":\"decisions\",\"schema\":null},\"AuditLog\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sequence\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"eventType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"event_type\"},{\"name\":\"payload\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"prevHash\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"prev_hash\"},{\"name\":\"hash\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"}],\"dbName\":\"audit_log\",\"schema\":null}},\"enums\":{},\"types\":{}}")
 config.parameterizationSchema = {
-  strings: JSON.parse("[]"),
-  graph: "AAAA"
+  strings: JSON.parse("[\"where\",\"action\",\"decision\",\"Action.findUnique\",\"Action.findUniqueOrThrow\",\"orderBy\",\"cursor\",\"Action.findFirst\",\"Action.findFirstOrThrow\",\"Action.findMany\",\"data\",\"Action.createOne\",\"Action.createMany\",\"Action.createManyAndReturn\",\"Action.updateOne\",\"Action.updateMany\",\"Action.updateManyAndReturn\",\"create\",\"update\",\"Action.upsertOne\",\"Action.deleteOne\",\"Action.deleteMany\",\"having\",\"_count\",\"_min\",\"_max\",\"Action.groupBy\",\"Action.aggregate\",\"Decision.findUnique\",\"Decision.findUniqueOrThrow\",\"Decision.findFirst\",\"Decision.findFirstOrThrow\",\"Decision.findMany\",\"Decision.createOne\",\"Decision.createMany\",\"Decision.createManyAndReturn\",\"Decision.updateOne\",\"Decision.updateMany\",\"Decision.updateManyAndReturn\",\"Decision.upsertOne\",\"Decision.deleteOne\",\"Decision.deleteMany\",\"Decision.groupBy\",\"Decision.aggregate\",\"AuditLog.findUnique\",\"AuditLog.findUniqueOrThrow\",\"AuditLog.findFirst\",\"AuditLog.findFirstOrThrow\",\"AuditLog.findMany\",\"AuditLog.createOne\",\"AuditLog.createMany\",\"AuditLog.createManyAndReturn\",\"AuditLog.updateOne\",\"AuditLog.updateMany\",\"AuditLog.updateManyAndReturn\",\"AuditLog.upsertOne\",\"AuditLog.deleteOne\",\"AuditLog.deleteMany\",\"_avg\",\"_sum\",\"AuditLog.groupBy\",\"AuditLog.aggregate\",\"AND\",\"OR\",\"NOT\",\"id\",\"sequence\",\"eventType\",\"payload\",\"prevHash\",\"hash\",\"createdAt\",\"equals\",\"in\",\"notIn\",\"lt\",\"lte\",\"gt\",\"gte\",\"not\",\"contains\",\"startsWith\",\"endsWith\",\"string_contains\",\"string_starts_with\",\"string_ends_with\",\"array_starts_with\",\"array_ends_with\",\"array_contains\",\"actionId\",\"reviewer\",\"DecisionOutcome\",\"outcome\",\"reason\",\"editedParameters\",\"decidedAt\",\"agentId\",\"tool\",\"parameters\",\"agentReasoning\",\"ActionStatus\",\"status\",\"policyRuleMatched\",\"is\",\"isNot\",\"connectOrCreate\",\"upsert\",\"disconnect\",\"delete\",\"connect\",\"set\",\"increment\",\"decrement\",\"multiply\",\"divide\"]"),
+  graph: "mwEbMAwCAAB5ACA-AAB3ADA_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-AABNADA_AABKABBAAABNADBBAQBOACFCBABPACFDAQBQACFEAABRACBFAQBSACFGAQBQACFHQABTACEDAAAANwAgBQAASQAwFgAASgAgAwAAADcAIAUAADgAMAYAADQAIAo-AABNADA_AABKABBAAABNADBBAQBOACFCBABPACFDAQBQACFEAABRACBFAQBSACFGAQBQACFHQABTACELFwAAVQAgGAAAXAAgGQAAXAAgSAEAAAABSQEAAAAESgEAAAAESwEAAAABTAEAAAABTQEAAAABTgEAAAABTwEAYAAhDRcAAFUAIBgAAF8AIBkAAF8AIDoAAF4AIDsAAF8AIEgEAAAAAUkEAAAABEoEAAAABEsEAAAAAUwEAAAAAU0EAAAAAU4EAAAAAU8EAF0AIQ4XAABVACAYAABcACAZAABcACBIAQAAAAFJAQAAAARKAQAAAARLAQAAAAFMAQAAAAFNAQAAAAFOAQAAAAFPAQBbACFQAQAAAAFRAQAAAAFSAQAAAAEPFwAAVQAgGAAAWgAgGQAAWgAgSIAAAAABS4AAAAABTIAAAAABTYAAAAABToAAAAABT4AAAAABUwEAAAABVAEAAAABVQEAAAABVoAAAAABV4AAAAABWIAAAAABDhcAAFgAIBgAAFkAIBkAAFkAIEgBAAAAAUkBAAAABUoBAAAABUsBAAAAAUwBAAAAAU0BAAAAAU4BAAAAAU8BAFcAIVABAAAAAVEBAAAAAVIBAAAAAQsXAABVACAYAABWACAZAABWACBIQAAAAAFJQAAAAARKQAAAAARLQAAAAAFMQAAAAAFNQAAAAAFOQAAAAAFPQABUACELFwAAVQAgGAAAVgAgGQAAVgAgSEAAAAABSUAAAAAESkAAAAAES0AAAAABTEAAAAABTUAAAAABTkAAAAABT0AAVAAhCEgCAAAAAUkCAAAABEoCAAAABEsCAAAAAUwCAAAAAU0CAAAAAU4CAAAAAU8CAFUAIQhIQAAAAAFJQAAAAARKQAAAAARLQAAAAAFMQAAAAAFNQAAAAAFOQAAAAAFPQABWACEOFwAAWAAgGAAAWQAgGQAAWQAgSAEAAAABSQEAAAAFSgEAAAAFSwEAAAABTAEAAAABTQEAAAABTgEAAAABTwEAVwAhUAEAAAABUQEAAAABUgEAAAABCEgCAAAAAUkCAAAABUoCAAAABUsCAAAAAUwCAAAAAU0CAAAAAU4CAAAAAU8CAFgAIQtIAQAAAAFJAQAAAAVKAQAAAAVLAQAAAAFMAQAAAAFNAQAAAAFOAQAAAAFPAQBZACFQAQAAAAFRAQAAAAFSAQAAAAEMSIAAAAAB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-AAB3ADA_AAAGABBAAAB3ADBBAQBiACFHQABnACFgAQBkACFhAQBkACFiAABlACBjAQBkACFlAAB4ZSJmAQBmACEESAAAAGUCSQAAAGUISgAAAGUITwAAdmUiDQEAAHIAID4AAG8AMD8AAAMAEEAAAG8AMEEBAGIAIVkBAGIAIVoBAGQAIVwAAHBcIl0BAGQAIV4AAHEAIF9AAGcAIWcAAAMAIGgAAAMAIAAAAAAAAAFuAQAAAAEFbgQAAAABbwQAAAABcAQAAAABcQQAAAABcgQAAAABAW4BAAAAAQFuQAAAAAEAAAABbgAAAFwCBREAAJcBACASAACaAQAgaQAAmAEAIGoAAJkBACBtAAABACADEQAAlwEAIGkAAJgBACBtAAABACACAgAAlgEAIGYAAHoAIAAAAAFuAAAAZQIHEQAAkAEAIBIAAJMBACBpAACRAQAgagAAkgEAIGsAAAMAIGwAAAMAIG0AABwAIAZBAQAAAAFaAQAAAAFcAAAAXAJdAQAAAAFegAAAAAFfQAAAAAECAAAAHAAgEQAAkAEAIAMAAAADACARAACQAQAgEgAAlAEAIAgAAAADACAKAACUAQAgQQEAgAEAIVoBAIABACFcAACHAVwiXQEAgAEAIV6AAAAAAV9AAIMBACEGQQEAgAEAIVoBAIABACFcAACHAVwiXQEAgAEAIV6AAAAAAV9AAIMBACEDEQAAkAEAIGkAAJEBACBtAAAcACACAQAAigEAIF4AAHoAIAhBAQAAAAFHQAAAAAFgAQAAAAFhAQAAAAFigAAAAAFjAQAAAAFlAAAAZQJmAQAAAAECAAAAAQAgEQAAlwEAIAMAAAAGACARAACXAQAgEgAAmwEAIAoAAAAGACAKAACbAQAgQQEAgAEAIUdAAIMBACFgAQCAAQAhYQEAgAEAIWKAAAAAAWMBAIABACFlAACOAWUiZgEAggEAIQhBAQCAAQAhR0AAgwEAIWABAIABACFhAQCAAQAhYoAAAAABYwEAgAEAIWUAAI4BZSJmAQCCAQAhAQIEAgEBAAEAAAADFwAHGAAIGQAJAAAAAxcABxgACBkACQEBAAEBAQABAxcADhgADxkAEAAAAAMXAA4YAA8ZABAAAAAFFwAWGAAZGQAaOgAXOwAYAAAAAAAFFwAWGAAZGQAaOgAXOwAYAwIBBAUBBwgBCAkBCQoBCwwBDA4DDQ8EDhEBDxMDEBQFExUBFBYBFRcDGhoGGxsKHB0CHR4CHiACHyECICICISQCIiYDIycLJCkCJSsDJiwMJy0CKC4CKS8DKjINKzMRLDUSLTYSLjkSLzoSMDsSMT0SMj8DM0ATNEISNUQDNkUUN0YSOEcSOUgDPEsVPUwb"
 }
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
@@ -70,8 +70,8 @@ export interface PrismaClientConstructor {
    * const prisma = new PrismaClient({
    *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
    * })
-   * // Fetch zero or more Users
-   * const users = await prisma.user.findMany()
+   * // Fetch zero or more Actions
+   * const actions = await prisma.action.findMany()
    * ```
    * 
    * Read more in our [docs](https://pris.ly/d/client).
@@ -94,8 +94,8 @@ export interface PrismaClientConstructor {
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Users
- * const users = await prisma.user.findMany()
+ * // Fetch zero or more Actions
+ * const actions = await prisma.action.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -188,7 +188,35 @@ export interface PrismaClient<
     extArgs: ExtArgs
   }>>
 
-    
+      /**
+   * `prisma.action`: Exposes CRUD operations for the **Action** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Actions
+    * const actions = await prisma.action.findMany()
+    * ```
+    */
+  get action(): Prisma.ActionDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.decision`: Exposes CRUD operations for the **Decision** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Decisions
+    * const decisions = await prisma.decision.findMany()
+    * ```
+    */
+  get decision(): Prisma.DecisionDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.auditLog`: Exposes CRUD operations for the **AuditLog** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AuditLogs
+    * const auditLogs = await prisma.auditLog.findMany()
+    * ```
+    */
+  get auditLog(): Prisma.AuditLogDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {
