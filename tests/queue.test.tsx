@@ -28,6 +28,7 @@ describe("approval queue", () => {
       {
         id: seedActions[0].id,
         tool: seedActions[0].tool,
+        parameters: seedActions[0].parameters,
         agentReasoning: seedActions[0].agentReasoning,
         createdAt: new Date("2026-01-01T10:00:00Z"),
       },
@@ -41,7 +42,7 @@ describe("approval queue", () => {
         id: { in: seedActions.map((action) => action.id) },
         status: "pending",
       },
-      select: { id: true, tool: true, agentReasoning: true, createdAt: true },
+      select: { id: true, tool: true, parameters: true, agentReasoning: true, createdAt: true },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     expect(markup).toContain(seedActions[0].tool);

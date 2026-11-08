@@ -10,7 +10,7 @@ async function getQueueSnapshot() {
       id: { in: seedActions.map((action) => action.id) },
       status: "pending",
     },
-    select: { id: true, tool: true, agentReasoning: true, createdAt: true },
+    select: { id: true, tool: true, parameters: true, agentReasoning: true, createdAt: true },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   return { actions, now: Date.now() };
@@ -36,6 +36,7 @@ export default async function Home() {
             actions={actions.map((action) => ({
               id: action.id,
               tool: action.tool,
+              parameters: action.parameters,
               summary: action.agentReasoning,
               createdAt: action.createdAt.toISOString(),
               age: formatAge(action.createdAt, now),
