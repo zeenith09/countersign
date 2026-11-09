@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "jiti prisma/seed.ts",
+    "demo:agent": "jiti scripts/demo-agent.ts",
     "test": "vitest run",
     "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts"
   },
   "dependencies": {
+    "@google/genai": "3.0.0",
     "@neon/config": "^1.9.5",
     "@neon/env": "^1.6.6",
     "@prisma/adapter-pg": "^7.10.1",
