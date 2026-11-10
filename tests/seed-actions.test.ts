@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { seedActions } from "../prisma/seed-actions";
 
 describe("seed actions", () => {
-  it("contains the requested pending examples with distinct IDs and reasoning", () => {
+  it("contains the requested examples with distinct IDs and reasoning", () => {
     expect(seedActions).toHaveLength(10);
     expect(new Set(seedActions.map((action) => action.id)).size).toBe(10);
-    expect(seedActions.every((action) => action.status === "pending")).toBe(true);
+    expect(seedActions.every((action) => !("status" in action))).toBe(true);
     expect(seedActions.every((action) => action.agentReasoning.trim().length > 0)).toBe(true);
     expect(seedActions.map((action) => action.tool).sort()).toEqual([
       "delete_record",

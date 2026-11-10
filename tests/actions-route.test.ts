@@ -1,17 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getPrisma, create, update, remove } = vi.hoisted(() => ({
+const { getPrisma, create, update, remove, transaction, auditFindFirst, auditCreate, queryRaw } = vi.hoisted(() => ({
   getPrisma: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  transaction: vi.fn(),
+  auditFindFirst: vi.fn(),
+  auditCreate: vi.fn(),
+  queryRaw: vi.fn(),
 }));
 
 vi.mock("../src/lib/prisma", () => ({ getPrisma }));
 
 import { POST } from "../src/app/api/actions/route";
-import * as storage from "../src/lib/actions/store-action";
 import { toolRegistry } from "../src/lib/tools";
+import { seedActions } from "../prisma/seed-actions";
+import { databaseTarget } from "../prisma/seed-identity";
 
 const actionId = "c076fb00-26d9-4dfd-9f31-000000000001";
 const baseAction = {
@@ -32,9 +37,16 @@ function request(body: unknown): Request {
 describe("action submission gateway", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    getPrisma.mockReturnValue({ action: { create, update, delete: remove } });
+    auditFindFirst.mockResolvedValue(null);
+    auditCreate.mockResolvedValue({});
+    queryRaw.mockResolvedValue([]);
+    transaction.mockImplementation(async (callback) => callback({
+      action: { create, update, delete: remove },
+      auditLog: { findFirst: auditFindFirst, create: auditCreate },
+      $queryRaw: queryRaw,
+    }));
+    getPrisma.mockReturnValue({ $transaction: transaction });
     create.mockResolvedValue({ id: actionId });
-    vi.spyOn(storage, "storeAction").mockImplementation(async (_client, data) => create({ data }));
     vi.spyOn(toolRegistry, "issue_refund").mockReturnValue({ mocked: true, tool: "issue_refund" });
     vi.spyOn(toolRegistry, "send_email").mockReturnValue({ mocked: true, tool: "send_email" });
     vi.spyOn(toolRegistry, "delete_record").mockReturnValue({ mocked: true, tool: "delete_record" });
@@ -44,6 +56,32 @@ describe("action submission gateway", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("accepts an exact seed payload only when the database target matches", async () => {
+    const databaseUrl = "postgresql://user:password@ep-example.neon.tech/app";
+    vi.stubEnv("DATABASE_URL", databaseUrl);
+    const seed = seedActions[0];
+    const response = await POST(new Request("http://localhost/api/actions", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-seed-database-target": databaseTarget(databaseUrl) },
+      body: JSON.stringify(seed),
+    }));
+    expect(response.status).toBe(201);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ id: seed.id }) }));
+  });
+
+  it.each([
+    ["an invalid UUID", { ...baseAction, id: "invalid" }],
+    ["a non-seed UUID", { ...baseAction, id: "8a34e239-bd0e-4e16-bc48-035bc1c9a615" }],
+    ["a modified seed payload", { ...seedActions[0], agentReasoning: "different" }],
+    ["a missing database target", seedActions[0]],
+  ])("rejects %s without storing", async (_name, action) => {
+    vi.stubEnv("DATABASE_URL", "postgresql://user:password@ep-example.neon.tech/app");
+    const response = await POST(request(action));
+    expect(response.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("stores an allowed refund before calling its mocked tool once", async () => {
@@ -58,6 +96,7 @@ describe("action submission gateway", () => {
       result: { mocked: true, tool: "issue_refund" },
     });
     expect(create).toHaveBeenCalledOnce();
+    expect(transaction).toHaveBeenCalledOnce();
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         ...baseAction,
@@ -65,9 +104,8 @@ describe("action submission gateway", () => {
         policyRuleMatched: "other-refunds-allowed",
       }),
     }));
-    expect(storage.storeAction).toHaveBeenCalledOnce();
     expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
-    expect(vi.mocked(storage.storeAction).mock.invocationCallOrder[0]).toBeLessThan(
+    expect(create.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(toolRegistry.issue_refund).mock.invocationCallOrder[0],
     );
   });
@@ -171,7 +209,7 @@ describe("action submission gateway", () => {
 
     expect(response.status).toBe(400);
     expect(create).not.toHaveBeenCalled();
-    expect(storage.storeAction).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
     expect(toolRegistry.send_email).not.toHaveBeenCalled();
     expect(toolRegistry.delete_record).not.toHaveBeenCalled();
@@ -183,6 +221,10 @@ describe("action submission gateway", () => {
     const response = await POST(request(baseAction));
     expect(response.status).toBe(500);
     expect(await response.text()).not.toContain("sensitive database failure");
+    expect(console.error).toHaveBeenCalledWith(
+      "Failed to store and audit action submission.",
+      expect.any(Error),
+    );
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
   });
 
@@ -203,23 +245,25 @@ describe("action submission gateway", () => {
     expect(update).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
     expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
-    expect(vi.mocked(storage.storeAction).mock.invocationCallOrder[0]).toBeLessThan(
+    expect(create.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(toolRegistry.issue_refund).mock.invocationCallOrder[0],
     );
   });
 
   it("waits for the stored action before calling the allowed tool", async () => {
-    let resolveStore!: (value: { id: string }) => void;
-    const stored = new Promise<{ id: string }>((resolve) => { resolveStore = resolve; });
-    vi.mocked(storage.storeAction).mockReturnValue(stored);
+    let resolveTransaction!: (value: { id: string; status: "auto_allowed" }) => void;
+    const stored = new Promise<{ id: string; status: "auto_allowed" }>((resolve) => {
+      resolveTransaction = resolve;
+    });
+    transaction.mockReturnValue(stored);
 
     const responsePromise = POST(request(baseAction));
     await new Promise((resolve) => setTimeout(resolve, 0));
     try {
-      expect(storage.storeAction).toHaveBeenCalledOnce();
+      expect(transaction).toHaveBeenCalledOnce();
       expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
     } finally {
-      resolveStore({ id: actionId });
+      resolveTransaction({ id: actionId, status: "auto_allowed" });
     }
     const response = await responsePromise;
 

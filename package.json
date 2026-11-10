@@ -10,7 +10,7 @@
     "db:seed": "jiti prisma/seed.ts",
     "demo:agent": "jiti scripts/demo-agent.ts",
     "test": "vitest run",
-    "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts"
+    "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts tests/db/audit-spike.test.ts --no-file-parallelism"
   },
   "dependencies": {
     "@google/genai": "3.0.0",

@@ -12,6 +12,7 @@ type QueueAction = {
   summary: string;
   createdAt: string;
   age: string;
+  policyRuleMatched: string | null;
 };
 
 export function QueueList({ actions }: { actions: QueueAction[] }) {
@@ -25,8 +26,11 @@ export function QueueList({ actions }: { actions: QueueAction[] }) {
           <p className="mt-1">
             <time dateTime={action.createdAt}>{action.age}</time>
             {" · "}
+            Pending approval
+            {" · "}
             <AssessmentStatus status="not_assessed" />
           </p>
+          <p>Matched rule: {action.policyRuleMatched ?? "Not recorded"}</p>
           <button
             type="button"
             aria-label={`Select ${action.tool}: ${action.summary}`}
