@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "jiti prisma/seed.ts",
+    "demo:agent": "jiti scripts/demo-agent.ts",
     "test": "vitest run",
-    "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts"
+    "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts tests/db/audit-spike.test.ts --no-file-parallelism"
   },
   "dependencies": {
+    "@google/genai": "3.0.0",
     "@neon/config": "^1.9.5",
     "@neon/env": "^1.6.6",
     "@prisma/adapter-pg": "^7.10.1",
@@ -20,7 +22,8 @@
     "next": "16.4.3",
     "pg": "^8.23.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

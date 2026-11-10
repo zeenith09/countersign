@@ -1,5 +1,3 @@
-import type { Prisma } from "../src/generated/prisma/client";
-
 export const seedActions = [
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000001",
@@ -7,7 +5,6 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 50, currency: "USD", orderId: "ORDER-1001" },
     agentReasoning: "The customer returned a damaged item and requested a refund for the purchase price.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000002",
@@ -15,7 +12,6 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 499, currency: "USD", orderId: "ORDER-1002" },
     agentReasoning: "The shipment was lost in transit, and the customer requested a refund instead of a replacement.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000003",
@@ -23,7 +19,6 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 500, currency: "USD", orderId: "ORDER-1003" },
     agentReasoning: "The customer canceled the order before fulfillment and requested the full payment back.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000004",
@@ -31,7 +26,6 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 501, currency: "USD", orderId: "ORDER-1004" },
     agentReasoning: "The delivered equipment did not match the order, and the customer declined an exchange.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000005",
@@ -39,7 +33,6 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 5000, currency: "USD", orderId: "ORDER-1005" },
     agentReasoning: "The customer reported a duplicate charge for a bulk order and requested a refund of the extra payment.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000006",
@@ -47,7 +40,6 @@ export const seedActions = [
     tool: "delete_record",
     parameters: { recordId: "RECORD-1006" },
     agentReasoning: "The customer requested removal of a duplicate test record from their account.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000007",
@@ -59,7 +51,6 @@ export const seedActions = [
       body: "Please review the open order before responding to the customer.",
     },
     agentReasoning: "The support team needs the order details to coordinate a customer response.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000008",
@@ -71,7 +62,6 @@ export const seedActions = [
       body: "We received your request and will follow up after reviewing it.",
     },
     agentReasoning: "The customer asked for confirmation that their support request was received.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000009",
@@ -83,7 +73,6 @@ export const seedActions = [
       body: "Please review the open order before responding to the customer.",
     },
     agentReasoning: "The provided contact address was listed for an order review, so the agent prepared a message to it.",
-    status: "pending",
   },
   {
     id: "c076fb00-26d9-4dfd-9f31-000000000010",
@@ -91,6 +80,5 @@ export const seedActions = [
     tool: "issue_refund",
     parameters: { amount: 20, currency: "USD", orderId: "ORDER-1010" },
     agentReasoning: "The customer was charged a small shipping fee after qualifying for free delivery.",
-    status: "pending",
   },
-] as const satisfies readonly Prisma.ActionCreateManyInput[];
+] as const;

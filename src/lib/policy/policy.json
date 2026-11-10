@@ -1,0 +1,50 @@
+{
+  "default_outcome": "needs_approval",
+  "rules": [
+    {
+      "id": "refund-over-500",
+      "description": "Refunds over $500 require reviewer approval.",
+      "tool": "issue_refund",
+      "conditions": [
+        {
+          "field": "parameters.amount",
+          "operator": "gt",
+          "value": 500
+        }
+      ],
+      "outcome": "needs_approval"
+    },
+    {
+      "id": "delete-record-blocked",
+      "description": "Deleting a record is always blocked.",
+      "tool": "delete_record",
+      "outcome": "block"
+    },
+    {
+      "id": "other-refunds-allowed",
+      "description": "Refunds not matched by the over-$500 rule are allowed.",
+      "tool": "issue_refund",
+      "outcome": "allow"
+    },
+    {
+      "id": "internal-domain-emails-allowed",
+      "description": "Allow emails only when the domain derived from the recipient address is exactly countersign.example.",
+      "tool": "send_email",
+      "conditions": [
+        {
+          "field": "recipient_domain",
+          "source": "parameters.to",
+          "operator": "equals",
+          "value": "countersign.example"
+        }
+      ],
+      "outcome": "allow"
+    },
+    {
+      "id": "other-emails-need-approval",
+      "description": "Emails not matched by the exact internal-domain rule require reviewer approval.",
+      "tool": "send_email",
+      "outcome": "needs_approval"
+    }
+  ]
+}
