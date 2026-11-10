@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
+import { deleteParameters, emailParameters, refundParameters } from "../src/lib/tools/parameters";
 
 const proposal = z.discriminatedUnion("tool", [
-  z.object({ tool: z.literal("issue_refund"), parameters: z.strictObject({ amount: z.number(), currency: z.string(), orderId: z.string() }) }),
-  z.object({ tool: z.literal("send_email"), parameters: z.strictObject({ to: z.string(), subject: z.string(), body: z.string() }) }),
-  z.object({ tool: z.literal("delete_record"), parameters: z.strictObject({ recordId: z.string() }) }),
+  z.object({ tool: z.literal("issue_refund"), parameters: refundParameters }),
+  z.object({ tool: z.literal("send_email"), parameters: emailParameters }),
+  z.object({ tool: z.literal("delete_record"), parameters: deleteParameters }),
 ]).and(z.object({ agentReasoning: z.string().min(1) }));
 
 async function main() {

@@ -39,7 +39,11 @@ describe("action submission gateway", () => {
     vi.resetAllMocks();
     auditFindFirst.mockResolvedValue(null);
     auditCreate.mockResolvedValue({});
-    queryRaw.mockResolvedValue([]);
+    queryRaw.mockImplementation((strings: TemplateStringsArray, value: unknown) =>
+      strings.join("").includes("::jsonb")
+        ? [{ payload: JSON.parse(String(value)) }]
+        : []
+    );
     transaction.mockImplementation(async (callback) => callback({
       action: { create, update, delete: remove },
       auditLog: { findFirst: auditFindFirst, create: auditCreate },
@@ -108,6 +112,34 @@ describe("action submission gateway", () => {
     expect(create.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(toolRegistry.issue_refund).mock.invocationCallOrder[0],
     );
+  });
+
+  it("waits for the transaction to commit before running an allowed tool", async () => {
+    let releaseCommit!: () => void;
+    const commit = new Promise<void>((resolve) => { releaseCommit = resolve; });
+    transaction.mockImplementation(async (callback) => {
+      const result = await callback({
+        action: { create, update, delete: remove },
+        auditLog: { findFirst: auditFindFirst, create: auditCreate },
+        $queryRaw: queryRaw,
+      });
+      await commit;
+      return result;
+    });
+
+    const response = POST(request(baseAction));
+    try {
+      await vi.waitFor(() => expect(auditCreate).toHaveBeenCalledOnce());
+      expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+      expect(transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 15_000, timeout: 30_000 });
+      expect(create.mock.invocationCallOrder[0]).toBeLessThan(queryRaw.mock.invocationCallOrder[0]);
+      expect(queryRaw.mock.calls[0][0].join("")).toContain("pg_advisory_xact_lock");
+      expect(queryRaw.mock.invocationCallOrder[0]).toBeLessThan(auditCreate.mock.invocationCallOrder[0]);
+    } finally {
+      releaseCommit();
+    }
+    expect((await response).status).toBe(201);
+    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
   });
 
   it.each([

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "../../generated/prisma/client";
-import { appendAuditEvent } from "../audit/chain";
+import { appendAuditEntry } from "../audit/chain";
 import { getPrisma } from "../prisma";
+import { validEditedParameters } from "../tools/parameters";
 
 type Outcome = "approved" | "denied";
 
@@ -9,7 +10,10 @@ export type DecisionResult =
   | { kind: "ok"; outcome: Outcome; tool: string; parameters: Prisma.JsonValue }
   | { kind: "not_found" }
   | { kind: "conflict" }
+  | { kind: "invalid_edit" }
   | { kind: "busy" };
+
+class InvalidEditError extends Error {}
 
 function isTransactionTimeout(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2028") {
@@ -25,6 +29,7 @@ export async function decideAction(
   outcome: Outcome,
   reason: string,
   client: PrismaClient = getPrisma(),
+  editedParameters?: Prisma.InputJsonObject,
 ): Promise<DecisionResult> {
   try {
     return await client.$transaction(async (transaction): Promise<DecisionResult> => {
@@ -41,11 +46,18 @@ export async function decideAction(
         where: { id: actionId },
         select: { tool: true, parameters: true },
       });
+      if (editedParameters !== undefined &&
+          (outcome !== "approved" || !validEditedParameters(action.tool, editedParameters))) {
+        throw new InvalidEditError("Edited parameters are invalid for this action.");
+      }
       const decision = await transaction.decision.create({
-        data: { id: randomUUID(), actionId, reviewer, outcome, reason },
+        data: {
+          id: randomUUID(), actionId, reviewer, outcome, reason,
+          ...(editedParameters !== undefined ? { editedParameters } : {}),
+        },
         select: { id: true, editedParameters: true },
       });
-      await appendAuditEvent(transaction, "action_decided", {
+      await appendAuditEntry(transaction, "action_decided", {
         action_id: actionId,
         decision_id: decision.id,
         reviewer,
@@ -61,6 +73,7 @@ export async function decideAction(
       };
     }, { maxWait: 15_000, timeout: 30_000 });
   } catch (error) {
+    if (error instanceof InvalidEditError) return { kind: "invalid_edit" };
     if (isTransactionTimeout(error)) return { kind: "busy" };
     throw error;
   }

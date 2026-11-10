@@ -50,13 +50,38 @@ describe("decision route", () => {
     let finish!: (value: unknown) => void;
     decideAction.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     const tool = vi.spyOn(toolRegistry, "issue_refund").mockReturnValue({ mocked: true, tool: "issue_refund" });
-    const response = POST(request({ reviewer: " reviewer ", outcome: "approved", reason: " reason " }), { params });
+    const editedParameters = { amount: 25, currency: "USD", orderId: "ORDER-1" };
+    const response = POST(request({ reviewer: " reviewer ", outcome: "approved", reason: " reason ", editedParameters }), { params });
     await vi.waitFor(() => expect(decideAction).toHaveBeenCalledOnce());
-    expect(decideAction).toHaveBeenCalledWith(id, "reviewer", "approved", "reason");
+    expect(decideAction).toHaveBeenCalledWith(id, "reviewer", "approved", "reason", undefined, editedParameters);
     expect(tool).not.toHaveBeenCalled();
-    finish({ kind: "ok", outcome: "approved", tool: "issue_refund", parameters: { edited: true } });
-    expect((await response).status).toBe(200);
-    expect(tool).toHaveBeenCalledExactlyOnceWith(id, { edited: true });
+    finish({ kind: "ok", outcome: "approved", tool: "issue_refund", parameters: editedParameters });
+    const result = await response;
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ actionId: id, outcome: "approved", message: "Action approved." });
+    expect(tool).toHaveBeenCalledExactlyOnceWith(id, editedParameters);
+  });
+
+  it("rejects edits on a denied decision without invoking the transaction", async () => {
+    const response = await POST(request({
+      reviewer: "reviewer", outcome: "denied", reason: "reason",
+      editedParameters: { amount: 25, currency: "USD", orderId: "ORDER-1" },
+    }), { params });
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toEqual(expect.any(String));
+    expect(decideAction).not.toHaveBeenCalled();
+  });
+
+  it("reports invalid tool-specific edits without executing a tool", async () => {
+    decideAction.mockResolvedValue({ kind: "invalid_edit" });
+    const tool = vi.spyOn(toolRegistry, "issue_refund");
+    const response = await POST(request({
+      reviewer: "reviewer", outcome: "approved", reason: "reason",
+      editedParameters: { amount: "invalid", currency: "USD", orderId: "ORDER-1" },
+    }), { params });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Edited parameters are invalid for this action." });
+    expect(tool).not.toHaveBeenCalled();
   });
 
   it("does not execute a tool for a denied decision", async () => {
@@ -64,6 +89,7 @@ describe("decision route", () => {
     const tool = vi.spyOn(toolRegistry, "issue_refund");
     const response = await POST(request({ reviewer: "reviewer", outcome: "denied", reason: "reason" }), { params });
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ actionId: id, outcome: "denied", message: "Action denied." });
     expect(tool).not.toHaveBeenCalled();
   });
 });
