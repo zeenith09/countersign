@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client";
 import type { PolicyEvaluation } from "../policy/evaluate";
-import { appendAuditEvent } from "../audit/chain";
+import { appendAuditEntry } from "../audit/chain";
 
 export async function storeAction(
   client: PrismaClient | Prisma.TransactionClient,
@@ -50,7 +50,7 @@ export async function storeActionWithAudit(
       policyRuleMatched: decision.rule_id,
     });
 
-    await appendAuditEvent(transaction, "action_submitted", {
+    await appendAuditEntry(transaction, "action_submitted", {
       action_id: stored.id,
       agent_id: action.agentId,
       tool: action.tool,

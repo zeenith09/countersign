@@ -10,9 +10,11 @@ Thumbs.db
 node_modules/
 .next/
 out/
+coverage/
 playwright-report/
 test-results/
 tests/db/generated/
+*.tsbuildinfo
 
 # Debug logs
 npm-debug.log*

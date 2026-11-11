@@ -1,13 +1,14 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { readEnv } from "../src/lib/config/env.mjs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { seedActions } from "./seed-actions";
 import { databaseTarget } from "./seed-identity";
 import { submitSeedActions } from "./seed-runner";
 
 async function main() {
-  const connectionString = process.env.SEED_DATABASE_URL;
-  const gatewayUrl = process.env.SEED_GATEWAY_URL;
+  const connectionString = readEnv("SEED_DATABASE_URL");
+  const gatewayUrl = readEnv("SEED_GATEWAY_URL");
   if (!connectionString || !gatewayUrl) {
     throw new Error("Set SEED_DATABASE_URL and SEED_GATEWAY_URL for the intended development database and gateway.");
   }

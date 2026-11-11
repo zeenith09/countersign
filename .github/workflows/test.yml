@@ -7,16 +7,45 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: countersign_test
+          POSTGRES_PASSWORD: countersign_test
+          POSTGRES_DB: countersign_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U countersign_test -d countersign_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       RUN_DB_SPIKE: "0"
+      RUN_DECISION_DB_TESTS: "1"
+      DATABASE_URL_TEST: "postgresql://countersign_test:countersign_test@127.0.0.1:5432/countersign_test"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
       - run: npx prisma generate --config tests/db/prisma.config.ts
-      - run: npx tsc --noEmit
       - run: npm run lint
-      - run: npm test
+      - run: npm run typecheck
+      - run: node scripts/check-deps.mjs
+      - run: npm run test:coverage
+      - name: Cache SonarQube packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
+import { readEnv } from "./src/lib/config/env.mjs";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -9,8 +10,8 @@ export default defineConfig({
   },
   datasource: {
     url: env("DIRECT_URL"),
-    ...(process.env.SHADOW_DIRECT_URL
-      ? { shadowDatabaseUrl: process.env.SHADOW_DIRECT_URL }
+    ...(readEnv("SHADOW_DIRECT_URL")
+      ? { shadowDatabaseUrl: readEnv("SHADOW_DIRECT_URL") }
       : {}),
   },
 });

@@ -5,20 +5,22 @@ import { databaseTarget, isSeedPayload } from "../../../prisma/seed-identity";
 import { storeActionWithAudit } from "./store-action";
 import { evaluatePolicy } from "../policy/evaluate";
 import { policy } from "../policy/policy";
+import { readEnv } from "../config/env.mjs";
 import { getPrisma } from "../prisma";
 import { toolRegistry } from "../tools";
+import {
+  actionParametersSchema,
+  MAX_AGENT_REASONING_LENGTH,
+} from "../tools/parameters";
 
 const submissionSchema = z.object({
   id: z.uuid().optional(),
-  agentId: z.string().min(1),
-  agentReasoning: z.string(),
-  tool: z.string().min(1),
-  parameters: z.custom<Prisma.InputJsonObject>((value) =>
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    z.json().safeParse(value).success
-  ),
+  agentId: z.string().min(1).max(100),
+  agentReasoning: z.string().min(1).max(MAX_AGENT_REASONING_LENGTH, {
+    message: `Agent reasoning must be ${MAX_AGENT_REASONING_LENGTH.toLocaleString("en-US")} characters or fewer.`,
+  }),
+  tool: z.string().min(1).max(100),
+  parameters: actionParametersSchema,
 });
 
 function isSupportedTool(tool: string): tool is keyof typeof toolRegistry {
@@ -41,15 +43,18 @@ export async function handleActionSubmission(
 
   const parsed = submissionSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ message: "Invalid action submission." }, { status: 400 });
+    return Response.json({
+      message: parsed.error.issues[0]?.message ?? "Invalid action submission.",
+    }, { status: 400 });
   }
 
   const action = parsed.data;
   if (action.id && !isSeedPayload({ ...action, id: action.id })) {
     return Response.json({ message: "Action ID is reserved for its matching seed submission." }, { status: 400 });
   }
-  if (action.id && (!process.env.DATABASE_URL ||
-      request.headers.get("x-seed-database-target") !== databaseTarget(process.env.DATABASE_URL))) {
+  const databaseUrl = readEnv("DATABASE_URL");
+  if (action.id && (!databaseUrl ||
+      request.headers.get("x-seed-database-target") !== databaseTarget(databaseUrl))) {
     return Response.json({ message: "Seed database does not match the gateway database." }, { status: 400 });
   }
   const supported = isSupportedTool(action.tool);
@@ -70,7 +75,7 @@ export async function handleActionSubmission(
     if (action.id && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return Response.json({ message: "Seed action ID already exists." }, { status: 409 });
     }
-    console.error("Failed to store and audit action submission.", error);
+    console.error("Failed to store and audit action submission.");
     return Response.json({ message: "Could not store the action." }, { status: 500 });
   }
 

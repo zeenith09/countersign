@@ -1,15 +1,16 @@
 // Prerequisite check for the RAG stretch. Targets the isolated spike branch only.
 // Run: RUN_DB_SPIKE=1 SPIKE_DIRECT_URL=<spike direct URL> node tests/db/pgvector-check.mjs
 import pg from "pg";
+import { readEnv } from "../../src/lib/config/env.mjs";
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
   process.exit(1);
 }
 
-if (process.env.RUN_DB_SPIKE !== "1") fail("set RUN_DB_SPIKE=1 to opt in.");
+if (readEnv("RUN_DB_SPIKE") !== "1") fail("set RUN_DB_SPIKE=1 to opt in.");
 
-const connectionString = process.env.SPIKE_DIRECT_URL;
+const connectionString = readEnv("SPIKE_DIRECT_URL");
 if (!connectionString) fail("SPIKE_DIRECT_URL is not set.");
 
 let hostname;
