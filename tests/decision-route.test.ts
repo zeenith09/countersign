@@ -22,6 +22,42 @@ describe("decision route", () => {
     vi.restoreAllMocks();
   });
 
+  it("rejects malformed JSON without calling the transaction or a tool", async () => {
+    const tool = vi.spyOn(toolRegistry, "issue_refund");
+    const response = await POST(new Request("http://localhost/api/actions/id/decision", {
+      method: "POST",
+      body: "{",
+    }), { params });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Invalid decision." });
+    expect(decideAction).not.toHaveBeenCalled();
+    expect(tool).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-UUID action id without parsing the body or calling the transaction", async () => {
+    const tool = vi.spyOn(toolRegistry, "issue_refund");
+    const response = await POST(request({
+      reviewer: "reviewer", outcome: "approved", reason: "reason",
+    }), { params: Promise.resolve({ id: "not-a-uuid" }) });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Invalid decision." });
+    expect(decideAction).not.toHaveBeenCalled();
+    expect(tool).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-SyntaxError failures while reading the request body", async () => {
+    const error = new Error("body read failed");
+    const malformedRequest = new Request("http://localhost/api/actions/id/decision", {
+      method: "POST",
+    });
+    vi.spyOn(malformedRequest, "json").mockRejectedValue(error);
+
+    await expect(POST(malformedRequest, { params })).rejects.toBe(error);
+    expect(decideAction).not.toHaveBeenCalled();
+  });
+
   it.each([undefined, "", " \t "])("rejects a missing or blank reason without calling the transaction or a tool", async (reason) => {
     const tool = vi.spyOn(toolRegistry, "issue_refund");
     const response = await POST(request({ reviewer: "reviewer", outcome: "approved", reason }), { params });
@@ -30,6 +66,24 @@ describe("decision route", () => {
     expect(decideAction).not.toHaveBeenCalled();
     expect(tool).not.toHaveBeenCalled();
   });
+
+  it.each(["not_a_tool", "toString", "constructor"])(
+    "throws when an approved result has an unregistered tool (%s)", async (toolName) => {
+      decideAction.mockResolvedValue({
+        kind: "ok",
+        outcome: "approved",
+        tool: toolName,
+        parameters: {},
+      });
+      const tools = (Object.keys(toolRegistry) as (keyof typeof toolRegistry)[])
+        .map((tool) => vi.spyOn(toolRegistry, tool));
+
+      await expect(POST(request({
+        reviewer: "reviewer", outcome: "approved", reason: "reason",
+      }), { params })).rejects.toThrow("Approved action has an unsupported tool.");
+      for (const tool of tools) expect(tool).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ["not_found", 404, "Action not found."],

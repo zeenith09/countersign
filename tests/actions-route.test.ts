@@ -14,6 +14,7 @@ const { getPrisma, create, update, remove, transaction, auditFindFirst, auditCre
 vi.mock("../src/lib/prisma", () => ({ getPrisma }));
 
 import { POST } from "../src/app/api/actions/route";
+import { Prisma } from "../src/generated/prisma/client";
 import { toolRegistry } from "../src/lib/tools";
 import { seedActions } from "../prisma/seed-actions";
 import { databaseTarget } from "../prisma/seed-identity";
@@ -31,6 +32,17 @@ function request(body: unknown): Request {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+function seedRequest(action: typeof seedActions[number], databaseUrl: string): Request {
+  return new Request("http://localhost/api/actions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-seed-database-target": databaseTarget(databaseUrl),
+    },
+    body: JSON.stringify(action),
   });
 }
 
@@ -61,6 +73,42 @@ describe("action submission gateway", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
+  });
+
+  it("returns 400 for malformed JSON without storing or calling a tool", async () => {
+    const response = await POST(new Request("http://localhost/api/actions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{",
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Invalid action submission." });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-SyntaxError failures while reading the request body", async () => {
+    const error = new Error("body read failed");
+    const malformedRequest = new Request("http://localhost/api/actions", { method: "POST" });
+    vi.spyOn(malformedRequest, "json").mockRejectedValue(error);
+
+    await expect(POST(malformedRequest)).rejects.toBe(error);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns the specified validation message for oversized agent reasoning", async () => {
+    const response = await POST(request({
+      ...baseAction,
+      agentReasoning: "x".repeat(2_001),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      message: "Agent reasoning must be 2,000 characters or fewer.",
+    });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
   });
 
   it("accepts an exact seed payload only when the database target matches", async () => {
@@ -310,6 +358,42 @@ describe("action submission gateway", () => {
     expect(console.error).toHaveBeenCalledOnce();
     expect(console.error).toHaveBeenCalledWith("Failed to store and audit action submission.");
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 for a duplicate seeded action without calling its allowed tool", async () => {
+    const databaseUrl = "postgresql://user:password@ep-example.neon.tech/app";
+    vi.stubEnv("DATABASE_URL", databaseUrl);
+    create.mockRejectedValue(new Prisma.PrismaClientKnownRequestError("Duplicate action ID.", {
+      code: "P2002",
+      clientVersion: "test",
+    }));
+
+    const response = await POST(seedRequest(seedActions[0], databaseUrl));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ message: "Seed action ID already exists." });
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("rejects an allowed action if its registered tool disappears during storage", async () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(toolRegistry, "issue_refund");
+    const tool = vi.mocked(toolRegistry.issue_refund);
+    create.mockImplementation(async () => {
+      expect(Reflect.deleteProperty(toolRegistry, "issue_refund")).toBe(true);
+      return { id: actionId };
+    });
+
+    try {
+      await expect(POST(request(baseAction)))
+        .rejects.toThrow("An allowed action must have a supported tool.");
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(toolRegistry, "issue_refund", originalDescriptor);
+      }
+    }
+
+    expect(tool).not.toHaveBeenCalled();
   });
 
   it("returns 500 with actionId when a mocked tool throws after storage", async () => {
