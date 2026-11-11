@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomInt, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { readEnv } from "../../src/lib/config/env.mjs";
 import { PrismaClient } from "./generated/client";
 import { assertSpikeTarget } from "./spike-target";
 
@@ -142,15 +143,15 @@ async function verifyConditionalUpdate(prisma: PrismaClient) {
 }
 
 export async function runSpike() {
-  if (process.env.RUN_DB_SPIKE !== "1") {
+  if (readEnv("RUN_DB_SPIKE") !== "1") {
     throw new Error("Set RUN_DB_SPIKE=1 only for the isolated spike branch.");
   }
-  const mode = process.env.SPIKE_DB_MODE ?? "pooled";
+  const mode = readEnv("SPIKE_DB_MODE") ?? "pooled";
   if (mode !== "pooled" && mode !== "direct") {
     throw new Error("SPIKE_DB_MODE must be pooled or direct.");
   }
   const variable = mode === "direct" ? "SPIKE_DIRECT_URL" : "SPIKE_DATABASE_URL";
-  const connectionString = process.env[variable];
+  const connectionString = readEnv(variable);
   if (!connectionString) throw new Error(`${variable} must point to the spike branch.`);
   assertSpikeTarget(connectionString, variable);
   const prisma = new PrismaClient({

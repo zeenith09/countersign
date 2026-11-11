@@ -7,9 +7,12 @@
     "build": "prisma generate --config tests/db/prisma.config.ts && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "check": "npm run lint && npm run typecheck && node scripts/check-deps.mjs && npm test",
     "db:seed": "jiti prisma/seed.ts",
     "demo:agent": "jiti scripts/demo-agent.ts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov",
     "test:db": "RUN_DB_SPIKE=1 vitest run tests/db/transaction-spike.test.ts tests/db/audit-spike.test.ts tests/db/concurrency-integration.test.ts --no-file-parallelism"
   },
   "dependencies": {
@@ -33,6 +36,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "prisma": "^7.10.1",

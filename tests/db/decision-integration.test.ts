@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readEnv } from "../../src/lib/config/env.mjs";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { decideAction } from "../../src/lib/actions/decide-action";
 import { appendAuditEntry, verifyAuditChain, verifyChain, verifyLegacyAuditChain } from "../../src/lib/audit/chain";
@@ -12,11 +13,11 @@ const expectedEndpoint = "ep-lively-heart-b54javzi";
 const testTimeout = 45_000;
 
 function testConnection(): string {
-  const value = process.env.DATABASE_URL_TEST;
+  const value = readEnv("DATABASE_URL_TEST");
   if (!value) throw new Error("DATABASE_URL_TEST is required.");
   const url = new URL(value);
   const hostname = url.hostname.toLowerCase();
-  if (process.env.CI === "true" && hostname === "127.0.0.1" && url.port === "5432" && url.pathname === "/countersign_test") {
+  if (readEnv("CI") === "true" && hostname === "127.0.0.1" && url.port === "5432" && url.pathname === "/countersign_test") {
     return value;
   }
   if (!hostname.endsWith(".neon.tech") || hostname.split(".")[0].replace(/-pooler$/, "") !== expectedEndpoint) {
@@ -25,7 +26,7 @@ function testConnection(): string {
   return value;
 }
 
-describe.skipIf(process.env.RUN_DECISION_DB_TESTS !== "1")("decision integration on isolated Postgres schemas", () => {
+describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration on isolated Postgres schemas", () => {
   let admin: PrismaClient;
   let client: PrismaClient;
   let schema: string;

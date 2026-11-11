@@ -5,6 +5,7 @@ import { databaseTarget, isSeedPayload } from "../../../prisma/seed-identity";
 import { storeActionWithAudit } from "./store-action";
 import { evaluatePolicy } from "../policy/evaluate";
 import { policy } from "../policy/policy";
+import { readEnv } from "../config/env.mjs";
 import { getPrisma } from "../prisma";
 import { toolRegistry } from "../tools";
 
@@ -48,8 +49,9 @@ export async function handleActionSubmission(
   if (action.id && !isSeedPayload({ ...action, id: action.id })) {
     return Response.json({ message: "Action ID is reserved for its matching seed submission." }, { status: 400 });
   }
-  if (action.id && (!process.env.DATABASE_URL ||
-      request.headers.get("x-seed-database-target") !== databaseTarget(process.env.DATABASE_URL))) {
+  const databaseUrl = readEnv("DATABASE_URL");
+  if (action.id && (!databaseUrl ||
+      request.headers.get("x-seed-database-target") !== databaseTarget(databaseUrl))) {
     return Response.json({ message: "Seed database does not match the gateway database." }, { status: 400 });
   }
   const supported = isSupportedTool(action.tool);

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
+import { readEnv } from "../src/lib/config/env.mjs";
 import { deleteParameters, emailParameters, refundParameters } from "../src/lib/tools/parameters";
 
 const proposal = z.discriminatedUnion("tool", [
@@ -10,7 +11,9 @@ const proposal = z.discriminatedUnion("tool", [
 ]).and(z.object({ agentReasoning: z.string().min(1) }));
 
 async function main() {
-  const { GEMINI_API_KEY, GEMINI_MODEL, DEMO_GATEWAY_URL } = process.env;
+  const GEMINI_API_KEY = readEnv("GEMINI_API_KEY");
+  const GEMINI_MODEL = readEnv("GEMINI_MODEL");
+  const DEMO_GATEWAY_URL = readEnv("DEMO_GATEWAY_URL");
   if (!GEMINI_API_KEY || !GEMINI_MODEL || !DEMO_GATEWAY_URL) {
     throw new Error("Set GEMINI_API_KEY, GEMINI_MODEL, and DEMO_GATEWAY_URL before running the demo.");
   }

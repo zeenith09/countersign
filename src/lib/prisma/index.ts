@@ -1,4 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+import { readEnv } from "../config/env.mjs";
 import { PrismaClient } from "../../generated/prisma/client";
 
 const globalForPrisma = globalThis as typeof globalThis & {
@@ -7,7 +8,7 @@ const globalForPrisma = globalThis as typeof globalThis & {
 
 export function getPrisma(): PrismaClient {
   if (!globalForPrisma.prisma) {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = readEnv("DATABASE_URL");
     if (!connectionString) {
       throw new Error("DATABASE_URL is not configured.");
     }

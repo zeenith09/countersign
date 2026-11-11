@@ -27,12 +27,20 @@ jobs:
       DATABASE_URL_TEST: "postgresql://countersign_test:countersign_test@127.0.0.1:5432/countersign_test"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
       - run: npx prisma generate --config tests/db/prisma.config.ts
-      - run: npx tsc --noEmit
       - run: npm run lint
-      - run: npm test
+      - run: npm run typecheck
+      - run: node scripts/check-deps.mjs
+      - run: npm run test:coverage
+      - name: SonarQube Cloud Scan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readEnv } from "../../src/lib/config/env.mjs";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { handleActionSubmission } from "../../src/lib/actions/submit-action";
 import { verifyAuditChain } from "../../src/lib/audit/chain";
@@ -112,15 +113,15 @@ function request(body: unknown): Request {
 }
 
 function getSpikeConnection() {
-  if (process.env.RUN_DB_SPIKE !== "1") {
+  if (readEnv("RUN_DB_SPIKE") !== "1") {
     throw new Error("Set RUN_DB_SPIKE=1 only after confirming the isolated spike branch.");
   }
-  const mode = process.env.SPIKE_DB_MODE ?? "pooled";
+  const mode = readEnv("SPIKE_DB_MODE") ?? "pooled";
   if (mode !== "pooled" && mode !== "direct") {
     throw new Error("SPIKE_DB_MODE must be pooled or direct.");
   }
   const variable = mode === "direct" ? "SPIKE_DIRECT_URL" : "SPIKE_DATABASE_URL";
-  const connectionString = process.env[variable];
+  const connectionString = readEnv(variable);
   if (!connectionString) {
     throw new Error(`${variable} must point to the isolated spike branch.`);
   }
@@ -128,7 +129,7 @@ function getSpikeConnection() {
   return connectionString;
 }
 
-describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres action audit spike", () => {
+describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("hosted Postgres action audit spike", () => {
   let admin: PrismaClient;
   let prisma: PrismaClient;
   let schemaName = "";

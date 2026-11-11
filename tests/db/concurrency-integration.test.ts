@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readEnv } from "../../src/lib/config/env.mjs";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { POST as decideRoute } from "../../src/app/api/actions/[id]/decision/route";
 import { decideAction } from "../../src/lib/actions/decide-action";
@@ -52,12 +53,12 @@ async function waitForBlockedBackends(
 }
 
 function spikeConnection(): string {
-  const mode = process.env.SPIKE_DB_MODE ?? "pooled";
+  const mode = readEnv("SPIKE_DB_MODE") ?? "pooled";
   if (mode !== "pooled" && mode !== "direct") {
     throw new Error("SPIKE_DB_MODE must be pooled or direct.");
   }
   const variable = mode === "pooled" ? "SPIKE_DATABASE_URL" : "SPIKE_DIRECT_URL";
-  const connectionString = process.env[variable];
+  const connectionString = readEnv(variable);
   if (!connectionString) throw new Error(`${variable} must point to the isolated spike branch.`);
   assertSpikeTarget(connectionString, variable);
   return connectionString;
@@ -70,7 +71,7 @@ function decisionRequest() {
   });
 }
 
-describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("real Postgres concurrency integration", () => {
+describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("real Postgres concurrency integration", () => {
   let admin: PrismaClient;
   let client: PrismaClient;
   let schema = "";

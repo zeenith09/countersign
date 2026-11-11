@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readEnv } from "../../src/lib/config/env.mjs";
 import type { PrismaClient } from "./generated/client";
 import { assertSpikeTarget } from "./spike-target";
 
@@ -17,15 +18,15 @@ function barrier() {
 }
 
 async function createClient() {
-  if (process.env.RUN_DB_SPIKE !== "1") {
+  if (readEnv("RUN_DB_SPIKE") !== "1") {
     throw new Error("Set RUN_DB_SPIKE=1 only after confirming the disposable database target.");
   }
-  const mode = process.env.SPIKE_DB_MODE ?? "pooled";
+  const mode = readEnv("SPIKE_DB_MODE") ?? "pooled";
   if (mode !== "pooled" && mode !== "direct") {
     throw new Error("SPIKE_DB_MODE must be pooled or direct.");
   }
   const variable = mode === "direct" ? "SPIKE_DIRECT_URL" : "SPIKE_DATABASE_URL";
-  const connectionString = process.env[variable];
+  const connectionString = readEnv(variable);
   if (!connectionString) {
     throw new Error(`${variable} must point to the disposable spike branch.`);
   }
@@ -36,7 +37,7 @@ async function createClient() {
   });
 }
 
-describe.skipIf(process.env.RUN_DB_SPIKE !== "1")("hosted Postgres transaction spike", () => {
+describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("hosted Postgres transaction spike", () => {
   let prisma: PrismaClient;
   let tableCreated = false;
 
