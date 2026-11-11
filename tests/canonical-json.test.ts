@@ -7,6 +7,11 @@ describe("canonicalJson", () => {
     expect(canonicalJson({ apple: 2, zebra: 1 })).toBe(canonicalJson({ zebra: 1, apple: 2 }));
   });
 
+  it("orders object keys by code unit for stable audit hashes", () => {
+    expect(canonicalJson({ b: 1, B: 2, a: 3, _x: 4, "10": 5, "9": 6 }))
+      .toBe('{"10":5,"9":6,"B":2,"_x":4,"a":3,"b":1}');
+  });
+
   it("sorts nested objects while preserving nested array order", () => {
     expect(canonicalJson({ z: [{ z: 1, a: 2 }, [{ b: null, a: true }, 3]], a: "text" }))
       .toBe('{"a":"text","z":[{"a":2,"z":1},[{"a":true,"b":null},3]]}');

@@ -90,7 +90,10 @@ async function verifyAdvisoryLock(prisma: PrismaClient) {
     releaseFirst.release();
     const results = await Promise.allSettled([first, second]);
     for (const result of results) {
-      if (result.status === "rejected") throw result.reason;
+      if (result.status === "rejected") {
+        if (result.reason instanceof Error) throw result.reason;
+        throw new Error("Advisory lock transaction rejected with a non-Error value.", { cause: result.reason });
+      }
     }
   }
   assert.equal(secondAcquired, true);

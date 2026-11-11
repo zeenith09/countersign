@@ -8,6 +8,7 @@ import { appendAuditEntry, verifyAuditChain, verifyChain, verifyLegacyAuditChain
 import { POST } from "../../src/app/api/actions/[id]/decision/route";
 import { handleActionSubmission } from "../../src/lib/actions/submit-action";
 import { toolRegistry } from "../../src/lib/tools";
+import { createActionTestTables } from "./action-test-schema";
 
 const expectedEndpoint = "ep-lively-heart-b54javzi";
 const testTimeout = 45_000;
@@ -39,28 +40,7 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
     admin = new PrismaClient({ adapter: new PrismaPg({ connectionString }, { schema: "public" }) });
     await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     schemaCreated = true;
-    await admin.$executeRawUnsafe(`CREATE TYPE "${schema}".action_status AS ENUM ('pending', 'approved', 'denied', 'auto_allowed', 'blocked')`);
-    await admin.$executeRawUnsafe(`CREATE TYPE "${schema}".decision_outcome AS ENUM ('approved', 'denied')`);
-    await admin.$executeRawUnsafe(`
-      CREATE TABLE "${schema}".actions (
-        id UUID PRIMARY KEY, agent_id TEXT NOT NULL, tool TEXT NOT NULL,
-        parameters JSONB NOT NULL, agent_reasoning TEXT NOT NULL,
-        status "${schema}".action_status NOT NULL DEFAULT 'pending',
-        policy_rule_matched TEXT, created_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`);
-    await admin.$executeRawUnsafe(`
-      CREATE TABLE "${schema}".decisions (
-        id UUID PRIMARY KEY, action_id UUID NOT NULL UNIQUE REFERENCES "${schema}".actions(id),
-        reviewer TEXT NOT NULL, outcome "${schema}".decision_outcome NOT NULL,
-        reason TEXT NOT NULL, edited_parameters JSONB,
-        decided_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`);
-    await admin.$executeRawUnsafe(`
-      CREATE TABLE "${schema}".audit_log (
-        id UUID PRIMARY KEY, sequence BIGINT NOT NULL UNIQUE, event_type TEXT NOT NULL,
-        payload JSONB NOT NULL, prev_hash CHAR(64), hash CHAR(64) NOT NULL,
-        created_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`);
+    await createActionTestTables(admin, schema);
     client = new PrismaClient({ adapter: new PrismaPg({ connectionString }, { schema }) });
   }, testTimeout);
 

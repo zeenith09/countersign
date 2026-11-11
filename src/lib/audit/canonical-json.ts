@@ -39,7 +39,8 @@ export function canonicalJson(value: unknown): string {
       if (keys.some((key) => typeof key !== "string")) {
         throw new TypeError("JSON objects cannot contain symbol keys.");
       }
-      const entries = (keys as string[]).sort().map((key) => {
+      // Hash input must use code-unit order, not localeCompare.
+      const entries = (keys as string[]).sort((a, b) => a < b ? -1 : a > b ? 1 : 0).map((key) => {
         const descriptor = Object.getOwnPropertyDescriptor(current, key);
         if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
           throw new TypeError("JSON objects must contain only enumerable values.");
