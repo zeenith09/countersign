@@ -1,18 +1,18 @@
 import { z } from "zod";
 import { decideAction } from "../../../../../lib/actions/decide-action";
 import { toolRegistry } from "../../../../../lib/tools";
-import type { Prisma } from "../../../../../generated/prisma/client";
+import {
+  actionParametersSchema,
+  MAX_AGENT_REASONING_LENGTH,
+} from "../../../../../lib/tools/parameters";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  reviewer: z.string().trim().min(1),
+  reviewer: z.string().trim().min(1).max(100),
   outcome: z.enum(["approved", "denied"]),
-  reason: z.string().trim().min(1),
-  editedParameters: z.custom<Prisma.InputJsonObject>((value) =>
-    value !== null && typeof value === "object" && !Array.isArray(value) &&
-    z.json().safeParse(value).success
-  ).optional(),
+  reason: z.string().trim().min(1).max(MAX_AGENT_REASONING_LENGTH),
+  editedParameters: actionParametersSchema.optional(),
 }).refine((body) => body.outcome === "approved" || body.editedParameters === undefined);
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -31,8 +31,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
+    const issue = parsed.error.issues[0];
     return Response.json({
-      message: "Enter a reviewer and reason, and choose approve or deny.",
+      message: issue
+        ? `${issue.path.join(".") ? `${issue.path.join(".")}: ` : ""}${issue.message}`
+        :
+        "Enter a reviewer and reason, and choose approve or deny.",
     }, { status: 400 });
   }
 
@@ -49,7 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw new Error("Approved action has an unsupported tool.");
     }
     const tool = result.tool as keyof typeof toolRegistry;
-    toolRegistry[tool](id, result.parameters);
+    toolRegistry[tool](id);
   }
   return Response.json({
     actionId: id,

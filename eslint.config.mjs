@@ -2,6 +2,60 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTypeScript from "eslint-config-next/typescript";
 
+const sharedRestrictedImportPatterns = [
+  {
+    regex: "^(drizzle-orm|typeorm|sequelize|knex|mongoose|objection|bookshelf|waterline|@mikro-orm/)",
+    message: "Use the project's Prisma ORM; do not add a second ORM.",
+  },
+  {
+    regex: "^(bullmq|bull|bee-queue|agenda|pg-boss|graphile-worker|amqplib|amqp-connection-manager|kafkajs|p-queue|piscina|bree|inngest)(/|$)|^@(?:temporalio|trigger\\.dev)/",
+    message: "Do not add a queue or worker library.",
+  },
+  {
+    regex: "^(axios|got|node-fetch|cross-fetch|isomorphic-fetch|ky|superagent|request|needle|undici|ofetch|wretch)(/|$)",
+    message: "Use the built-in fetch API instead of an HTTP client dependency.",
+  },
+];
+
+const modelSdkPattern = {
+  regex: "^(?:@google/genai|@google-cloud/vertexai|@anthropic-ai/sdk|openai|@mistralai/mistralai|cohere-ai|@cohere-ai/cohere|@aws-sdk/client-bedrock-runtime|@huggingface/inference|replicate|ollama|ai)(?:/|$)",
+  message: "Model SDK imports are allowed only in scripts/demo-agent.ts.",
+};
+
+const coreRestrictedImportPatterns = [
+  ...sharedRestrictedImportPatterns,
+  modelSdkPattern,
+  {
+    regex: "(^|[/.-])(?:retrieval|explanation)([/.-]|$)",
+    message: "The policy and gateway paths must not depend on retrieval or explanation code.",
+  },
+];
+
+const mockedToolRestrictedImportPatterns = [
+  ...sharedRestrictedImportPatterns,
+  modelSdkPattern,
+  {
+    regex: "^(?:node:)?(?:http|https|http2|net|tls|dgram|dns)(?:/|$)|^(?:ws|websocket|socket\\.io-client)(?:/|$)",
+    message: "Mocked tools must not import network libraries.",
+  },
+];
+
+const environmentAccessSyntax = {
+  selector: "MemberExpression[object.name='process'][property.name='env'], MemberExpression[object.name='process'][computed=true][property.value='env']",
+  message: "Read environment variables only through src/lib/config/env.mjs.",
+};
+
+const mockedToolNetworkCallSyntax = [
+  {
+    selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='fetch']",
+    message: "Mocked tools must only log; they must not make network requests.",
+  },
+  {
+    selector: "CallExpression[callee.type='MemberExpression'][callee.computed=true][callee.property.value='fetch']",
+    message: "Mocked tools must only log; they must not make network requests.",
+  },
+];
+
 const localRules = {
   "no-any-with-explanation": {
     meta: {
@@ -80,31 +134,44 @@ export default defineConfig([
       "local/no-any-with-explanation": "error",
       "local/require-eslint-disable-description": "error",
       "no-restricted-imports": ["error", {
-        patterns: [
-          {
-            regex: "^(drizzle-orm|typeorm|sequelize|knex|mongoose|objection|bookshelf|waterline|@mikro-orm/)",
-            message: "Use the project's Prisma ORM; do not add a second ORM.",
-          },
-          {
-            regex: "^(bullmq|bull|bee-queue|agenda|pg-boss|graphile-worker|amqplib|amqp-connection-manager|kafkajs|p-queue|piscina|bree|inngest)(/|$)|^@(?:temporalio|trigger\\.dev)/",
-            message: "Do not add a queue or worker library.",
-          },
-          {
-            regex: "^(axios|got|node-fetch|cross-fetch|isomorphic-fetch|ky|superagent|request|needle|undici|ofetch|wretch)(/|$)",
-            message: "Use the built-in fetch API instead of an HTTP client dependency.",
-          },
-        ],
+        patterns: [...sharedRestrictedImportPatterns, modelSdkPattern],
       }],
-      "no-restricted-properties": ["error", {
-        object: "process",
-        property: "env",
-        message: "Read environment variables only through src/lib/config/env.mjs.",
+      "no-restricted-syntax": ["error", environmentAccessSyntax],
+    },
+  },
+  {
+    files: [
+      "src/lib/policy/**/*.{js,mjs,cjs,jsx,ts,tsx}",
+      "src/lib/actions/**/*.{js,mjs,cjs,jsx,ts,tsx}",
+      "src/app/api/actions/**/*.{js,mjs,cjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: coreRestrictedImportPatterns }],
+    },
+  },
+  {
+    files: [
+      "src/lib/tools/**/*.{js,mjs,cjs,jsx,ts,tsx}",
+      "src/lib/mocked-tools/**/*.{js,mjs,cjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: mockedToolRestrictedImportPatterns }],
+      "no-restricted-globals": ["error", {
+        name: "fetch",
+        message: "Mocked tools must only log; they must not make network requests.",
       }],
+      "no-restricted-syntax": ["error", environmentAccessSyntax, ...mockedToolNetworkCallSyntax],
+    },
+  },
+  {
+    files: ["scripts/demo-agent.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: sharedRestrictedImportPatterns }],
     },
   },
   {
     files: ["src/lib/config/env.mjs"],
-    rules: { "no-restricted-properties": "off" },
+    rules: { "no-restricted-syntax": "off" },
   },
   {
     files: ["jest.config.js"],

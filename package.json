@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate --config tests/db/prisma.config.ts && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint && node scripts/check-lint-boundaries.mjs",
     "typecheck": "tsc --noEmit --incremental false",
     "check": "npm run lint && npm run typecheck && node scripts/check-deps.mjs && npm test",
     "db:seed": "jiti prisma/seed.ts",

@@ -46,7 +46,7 @@ describe("decision route", () => {
     },
   );
 
-  it("runs the mocked tool after an approved transaction returns, using its chosen parameters", async () => {
+  it("runs the mocked tool after an approved transaction returns without forwarding its parameters", async () => {
     let finish!: (value: unknown) => void;
     decideAction.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     const tool = vi.spyOn(toolRegistry, "issue_refund").mockReturnValue({ mocked: true, tool: "issue_refund" });
@@ -59,7 +59,7 @@ describe("decision route", () => {
     const result = await response;
     expect(result.status).toBe(200);
     expect(await result.json()).toEqual({ actionId: id, outcome: "approved", message: "Action approved." });
-    expect(tool).toHaveBeenCalledExactlyOnceWith(id, editedParameters);
+    expect(tool).toHaveBeenCalledExactlyOnceWith(id);
   });
 
   it("rejects edits on a denied decision without invoking the transaction", async () => {
