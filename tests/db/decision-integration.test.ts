@@ -9,23 +9,9 @@ import { POST } from "../../src/app/api/actions/[id]/decision/route";
 import { handleActionSubmission } from "../../src/lib/actions/submit-action";
 import { toolRegistry } from "../../src/lib/tools";
 import { createActionTestTables } from "./action-test-schema";
+import { testConnection } from "./test-target";
 
-const expectedEndpoint = "ep-lively-heart-b54javzi";
 const testTimeout = 45_000;
-
-function testConnection(): string {
-  const value = readEnv("DATABASE_URL_TEST");
-  if (!value) throw new Error("DATABASE_URL_TEST is required.");
-  const url = new URL(value);
-  const hostname = url.hostname.toLowerCase();
-  if (readEnv("CI") === "true" && hostname === "127.0.0.1" && url.port === "5432" && url.pathname === "/countersign_test") {
-    return value;
-  }
-  if (!hostname.endsWith(".neon.tech") || hostname.split(".")[0].replace(/-pooler$/, "") !== expectedEndpoint) {
-    throw new Error("DATABASE_URL_TEST does not target the configured test endpoint.");
-  }
-  return value;
-}
 
 describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration on isolated Postgres schemas", () => {
   let admin: PrismaClient;

@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { getPrisma } from "../lib/prisma";
 import { formatAge } from "./queue-display";
-import { QueueList } from "./queue-list";
+import { DecisionQueue } from "./decision-queue";
 import { summarizeAction } from "./action-summary";
 
 async function getQueueSnapshot() {
@@ -31,7 +31,7 @@ export default async function Home() {
         {actions.length === 0 ? (
           <p className="mt-4">No pending actions found.</p>
         ) : (
-          <QueueList
+          <DecisionQueue
             actions={actions.map((action) => ({
               id: action.id,
               tool: action.tool,

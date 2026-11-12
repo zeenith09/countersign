@@ -35,10 +35,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate --config tests/db/prisma.config.ts
+      - name: Apply test database migrations
+        run: npx prisma migrate deploy --config tests/db/migrate.config.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: node scripts/check-deps.mjs
       - run: npm run test:coverage
+      - name: Run concurrency integration tests
+        run: npx vitest run tests/db/concurrency-integration.test.ts --no-file-parallelism
+        env:
+          RUN_CONCURRENCY_DB_TESTS: "1"
       - name: Cache SonarQube packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:

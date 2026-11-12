@@ -10,6 +10,7 @@ import { appendAuditEntry, verifyChain } from "../../src/lib/audit/chain";
 import { toolRegistry } from "../../src/lib/tools";
 import { assertSpikeTarget } from "./spike-target";
 import { createActionTestTables } from "./action-test-schema";
+import { testConnection } from "./test-target";
 
 const transactionOptions = { maxWait: 15_000, timeout: 30_000 };
 const testTimeout = 90_000;
@@ -72,7 +73,7 @@ function decisionRequest() {
   });
 }
 
-describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("real Postgres concurrency integration", () => {
+describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1" && readEnv("RUN_CONCURRENCY_DB_TESTS") !== "1")("real Postgres concurrency integration", () => {
   let admin: PrismaClient;
   let client: PrismaClient;
   let schema = "";
@@ -80,7 +81,7 @@ describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("real Postgres concurrency inte
   let previousPrisma: PrismaClient | undefined;
 
   beforeEach(async () => {
-    const connectionString = spikeConnection();
+    const connectionString = readEnv("RUN_CONCURRENCY_DB_TESTS") === "1" ? testConnection() : spikeConnection();
     schema = `countersign_concurrency_${randomUUID().replaceAll("-", "")}`;
     schemaCreated = false;
     previousPrisma = globalForPrisma.prisma;

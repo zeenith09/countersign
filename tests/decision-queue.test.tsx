@@ -1,0 +1,168 @@
+import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const state = vi.hoisted(() => ({
+  values: ["Reviewer", "Reason", false, null] as unknown[],
+  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  index: 0,
+  inFlight: { current: false },
+  refresh: vi.fn(),
+}));
+
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return {
+    ...actual,
+    useState: () => {
+      const index = state.index++;
+      return [state.values[index], state.setters[index]];
+    },
+    useRef: () => state.inFlight,
+  };
+});
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: state.refresh }) }));
+
+import { DecisionQueue } from "../src/app/decision-queue";
+import { ActionDetails, QueueList, type QueueAction } from "../src/app/queue-list";
+
+const action: QueueAction = {
+  id: "c076fb00-26d9-4dfd-9f31-000000000001",
+  tool: "issue_refund",
+  parameters: { amount: 25 },
+  summary: "Refund request",
+  agentReasoning: "Customer requested a refund",
+  createdAt: "2026-01-01T10:00:00.000Z",
+  age: "2 hours ago",
+  policyRuleMatched: "refund-over-500",
+};
+
+function queueProps() {
+  state.index = 0;
+  const tree = DecisionQueue({ actions: [action] });
+  const children: ReactNode[] = tree.props.children;
+  const queue = children.find((child) => isValidElement(child) && child.type === QueueList);
+  if (!queue || !isValidElement(queue)) throw new Error("Queue not rendered");
+  return (queue as ReactElement<React.ComponentProps<typeof QueueList>>).props;
+}
+
+function findButton(node: ReactNode, text: string): ReactElement<{ onClick?: () => void; disabled?: boolean }> | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const match = findButton(child, text);
+      if (match) return match;
+    }
+    return undefined;
+  }
+  if (!isValidElement<{ children?: ReactNode; onClick?: () => void; disabled?: boolean }>(node)) return undefined;
+  if (node.type === "button" && node.props.children === text) return node;
+  return findButton(node.props.children, text);
+}
+
+describe("decision queue", () => {
+  beforeEach(() => {
+    state.values = ["Reviewer", "Reason", false, null];
+    state.inFlight.current = false;
+    state.refresh.mockReset();
+    state.setters.forEach((setter) => setter.mockReset());
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("wires approve, deny and conflict refresh to their controls", () => {
+    const onDecide = vi.fn();
+    const onRefresh = vi.fn();
+    const details = ActionDetails({ action, onDecide, decisionState: null, submitting: false, onRefresh });
+    findButton(details, "Approve")?.props.onClick?.();
+    findButton(details, "Deny")?.props.onClick?.();
+    expect(onDecide).toHaveBeenNthCalledWith(1, action.id, "approved");
+    expect(onDecide).toHaveBeenNthCalledWith(2, action.id, "denied");
+    expect(findButton(details, "Edit")?.props.disabled).toBe(true);
+
+    const conflict = ActionDetails({
+      action, onDecide, submitting: false, onRefresh,
+      decisionState: { actionId: action.id, message: "Already decided by someone else", refreshAvailable: true, locked: true },
+    });
+    findButton(conflict, "Refresh queue")?.props.onClick?.();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(findButton(conflict, "Approve")?.props.disabled).toBe(true);
+    expect(findButton(conflict, "Deny")?.props.disabled).toBe(true);
+  });
+
+  it.each(["approved", "denied"] as const)("sends the selected action and %s decision", async (outcome) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, outcome);
+    expect(fetchMock).toHaveBeenCalledWith(`/api/actions/${action.id}/decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewer: "Reviewer", outcome, reason: "Reason" }),
+    });
+    expect(state.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("requires a non-blank reviewer and reason", async () => {
+    state.values[1] = "   ";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(state.setters[3]).toHaveBeenCalledWith({
+      actionId: action.id, message: "Enter a reviewer and reason.", locked: false,
+    });
+  });
+
+  it("shows the requested conflict message and refresh button after re-reading status", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValueOnce(Response.json({ status: "denied" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+    const decisionState = state.setters[3].mock.calls.at(-1)?.[0];
+    const markup = renderToStaticMarkup(<ActionDetails action={action} onDecide={vi.fn()} decisionState={decisionState} submitting={false} onRefresh={vi.fn()} />);
+    expect(markup).toContain("Already decided by someone else");
+    expect(markup).toContain("Refresh queue");
+  });
+
+  it("reports unknown when a failed decision and its status cannot be verified", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network unavailable"));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "denied");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(state.setters[3]).toHaveBeenLastCalledWith({
+      actionId: action.id,
+      message: "Decision could not be confirmed. Current status: unknown. Refresh the queue before trying again.",
+      refreshAvailable: true,
+      locked: true,
+    });
+    expect(state.refresh).not.toHaveBeenCalled();
+  });
+
+  it("re-reads status after a busy response", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ status: "pending" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "denied");
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+    expect(state.setters[3]).toHaveBeenLastCalledWith({
+      actionId: action.id,
+      message: "Decision could not be confirmed. Current status: pending. Refresh the queue before trying again.",
+      refreshAvailable: true,
+      locked: true,
+    });
+  });
+
+  it("does not submit a second decision while the first is in flight", async () => {
+    let finish!: (response: Response) => void;
+    const fetchMock = vi.fn().mockReturnValue(new Promise<Response>((resolve) => { finish = resolve; }));
+    vi.stubGlobal("fetch", fetchMock);
+    const props = queueProps();
+    const first = props.onDecide(action.id, "approved");
+    await props.onDecide(action.id, "denied");
+    expect(fetchMock).toHaveBeenCalledOnce();
+    finish(new Response(null, { status: 200 }));
+    await first;
+  });
+});
