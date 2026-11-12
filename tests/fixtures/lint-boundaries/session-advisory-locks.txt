@@ -1,0 +1,10 @@
+const first = "SELECT pg_advisory_lock(1)";
+const second = "SELECT pg_try_advisory_lock(1)";
+const third = "SELECT pg_advisory_lock_shared(1)";
+const fourth = "SELECT pg_try_advisory_lock_shared(1)";
+const fifth = `SELECT pg_advisory_lock(1)`;
+const sixth = `SELECT pg_try_advisory_lock(1)`;
+const seventh = `SELECT pg_advisory_lock_shared(1)`;
+const eighth = `SELECT pg_try_advisory_lock_shared(1)`;
+const ninth = "pg_advisory_lock";
+const tenth = `PG_TRY_ADVISORY_LOCK_SHARED`;

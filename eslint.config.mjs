@@ -45,6 +45,31 @@ const environmentAccessSyntax = {
   message: "Read environment variables only through src/lib/config/env.mjs.",
 };
 
+const transactionSyntax = [
+  {
+    selector: "Property[key.name='isolationLevel'], Property[key.value='isolationLevel']",
+    message: "Do not set isolationLevel; transactions must stay on READ COMMITTED.",
+  },
+  {
+    selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='$transaction'][arguments.0.type='ArrayExpression'], CallExpression[callee.type='MemberExpression'][callee.property.value='$transaction'][arguments.0.type='ArrayExpression']",
+    message: "Use an interactive $transaction instead of the array form.",
+  },
+  {
+    selector: "Literal[value=/\\bpg_(?:try_)?advisory_lock(?:_shared)?\\b/i], TemplateElement[value.cooked=/\\bpg_(?:try_)?advisory_lock(?:_shared)?\\b/i]",
+    message: "Use transaction-level advisory locks, not session-level advisory locks.",
+  },
+];
+
+const actionDecisionSyntax = {
+  selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='update'][callee.object.property.name='action'], CallExpression[callee.type='MemberExpression'][callee.property.value='update'][callee.object.property.name='action'], CallExpression[callee.type='MemberExpression'][callee.property.name='update'][callee.object.property.value='action'], CallExpression[callee.type='MemberExpression'][callee.property.value='update'][callee.object.property.value='action']",
+  message: "Use a conditional action.updateMany for decisions.",
+};
+
+const auditHashSyntax = {
+  selector: "CallExpression[callee.object.name='JSON'][callee.property.name='stringify'], CallExpression[callee.object.name='JSON'][callee.property.value='stringify']",
+  message: "Use canonicalJson for audit hashing.",
+};
+
 const mockedToolNetworkCallSyntax = [
   {
     selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='fetch']",
@@ -136,7 +161,7 @@ export default defineConfig([
       "no-restricted-imports": ["error", {
         patterns: [...sharedRestrictedImportPatterns, modelSdkPattern],
       }],
-      "no-restricted-syntax": ["error", environmentAccessSyntax],
+      "no-restricted-syntax": ["error", environmentAccessSyntax, ...transactionSyntax],
     },
   },
   {
@@ -160,7 +185,19 @@ export default defineConfig([
         name: "fetch",
         message: "Mocked tools must only log; they must not make network requests.",
       }],
-      "no-restricted-syntax": ["error", environmentAccessSyntax, ...mockedToolNetworkCallSyntax],
+      "no-restricted-syntax": ["error", environmentAccessSyntax, ...transactionSyntax, ...mockedToolNetworkCallSyntax],
+    },
+  },
+  {
+    files: ["src/lib/actions/decide-action.ts", "src/app/api/actions/**/decision/route.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", environmentAccessSyntax, ...transactionSyntax, actionDecisionSyntax],
+    },
+  },
+  {
+    files: ["src/lib/audit/chain.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", environmentAccessSyntax, ...transactionSyntax, auditHashSyntax],
     },
   },
   {
@@ -171,7 +208,7 @@ export default defineConfig([
   },
   {
     files: ["src/lib/config/env.mjs"],
-    rules: { "no-restricted-syntax": "off" },
+    rules: { "no-restricted-syntax": ["error", ...transactionSyntax] },
   },
   {
     files: ["jest.config.js"],

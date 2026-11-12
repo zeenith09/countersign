@@ -27,6 +27,7 @@ async function waitForBlockedBackends(
   observer: PrismaClient,
   blockerPid: number,
   matches: (row: { pid: number; query: string; wait_event: string }) => boolean,
+  minimum = 2,
 ) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -48,10 +49,10 @@ async function waitForBlockedBackends(
       return byPid.get(pid)?.blockers.some((next) => reachesBlocker(next, visited)) ?? false;
     }
     const blocked = rows.filter((row) => matches(row) && reachesBlocker(row.pid));
-    if (blocked.length >= 2) return blocked.map((row) => row.pid);
+    if (blocked.length >= minimum) return blocked.map((row) => row.pid);
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  throw new Error("Did not observe two distinct transactions blocked behind the test lock within 10 seconds.");
+  throw new Error(`Did not observe ${minimum} distinct transactions blocked behind the test lock within 10 seconds.`);
 }
 
 function spikeConnection(): string {
@@ -66,10 +67,10 @@ function spikeConnection(): string {
   return connectionString;
 }
 
-function decisionRequest() {
+function decisionRequest(reviewer = "reviewer", outcome: "approved" | "denied" = "approved") {
   return new Request("http://localhost/api/actions/id/decision", {
     method: "POST",
-    body: JSON.stringify({ reviewer: "reviewer", outcome: "approved", reason: "reviewed" }),
+    body: JSON.stringify({ reviewer, outcome, reason: "reviewed" }),
   });
 }
 
@@ -119,6 +120,65 @@ describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1" && readEnv("RUN_CONCURRENCY_DB_T
       status: "pending",
     } });
   }
+
+  it("correlates two action decisions when their responses finish in reverse order", async () => {
+    const first = await createPendingAction();
+    const second = await createPendingAction();
+    const locked = barrier();
+    const release = barrier();
+    const completion: string[] = [];
+    let blockerPid = 0;
+    const blocker = client.$transaction(async (transaction) => {
+      [blockerPid] = (await transaction.$queryRaw<{ pid: number }[]>`SELECT pg_backend_pid() AS pid`)
+        .map((row) => row.pid);
+      await transaction.action.update({ where: { id: first.id }, data: { agentReasoning: first.agentReasoning } });
+      locked.release();
+      await release.promise;
+    }, { maxWait: 15_000, timeout: 45_000 });
+
+    try {
+      await Promise.race([locked.promise, blocker]);
+      const firstResponse = decideRoute(decisionRequest("first reviewer", "approved"), {
+        params: Promise.resolve({ id: first.id }),
+      }).then((response) => { completion.push(first.id); return response; });
+      try {
+        await waitForBlockedBackends(admin, blockerPid, (row) =>
+          row.query.includes(schema) && row.query.includes("actions"), 1);
+        const secondResponse = await decideRoute(decisionRequest("second reviewer", "denied"), {
+          params: Promise.resolve({ id: second.id }),
+        });
+        completion.push(second.id);
+        expect(secondResponse.status).toBe(200);
+        expect(await secondResponse.json()).toMatchObject({ actionId: second.id, outcome: "denied" });
+      } finally {
+        release.release();
+      }
+      const response = await firstResponse;
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ actionId: first.id, outcome: "approved" });
+      expect(completion).toEqual([second.id, first.id]);
+      const decisions = await client.decision.findMany({ orderBy: { reviewer: "asc" } });
+      expect(decisions.map(({ actionId, reviewer, outcome }) => ({ actionId, reviewer, outcome }))).toEqual([
+        { actionId: first.id, reviewer: "first reviewer", outcome: "approved" },
+        { actionId: second.id, reviewer: "second reviewer", outcome: "denied" },
+      ]);
+      expect((await client.action.findUniqueOrThrow({ where: { id: first.id } })).status).toBe("approved");
+      expect((await client.action.findUniqueOrThrow({ where: { id: second.id } })).status).toBe("denied");
+      const audit = await client.auditLog.findMany({ orderBy: { sequence: "asc" } });
+      expect(audit).toHaveLength(2);
+      for (const decision of decisions) {
+        expect(audit.filter((entry) => {
+          const payload = entry.payload;
+          return payload !== null && typeof payload === "object" && !Array.isArray(payload) &&
+            payload.action_id === decision.actionId && payload.decision_id === decision.id;
+        })).toHaveLength(1);
+      }
+      expect(verifyChain(audit)).toEqual({ ok: true });
+    } finally {
+      release.release();
+      await blocker;
+    }
+  }, testTimeout);
 
   it("allows exactly one of two competing decisions", async () => {
     const action = await createPendingAction();
@@ -344,6 +404,9 @@ describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1" && readEnv("RUN_CONCURRENCY_DB_T
       decideRoute(decisionRequest(), { params: Promise.resolve({ id: action.id }) }),
     ]);
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(tool).toHaveBeenCalledExactlyOnceWith(action.id, action.parameters);
+    const retry = await decideRoute(decisionRequest(), { params: Promise.resolve({ id: action.id }) });
+    expect(retry.status).toBe(409);
     expect(tool).toHaveBeenCalledExactlyOnceWith(action.id, action.parameters);
     expect(await client.decision.count()).toBe(1);
     const entries = await client.auditLog.findMany();

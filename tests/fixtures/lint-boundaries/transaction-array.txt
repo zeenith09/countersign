@@ -1,0 +1,2 @@
+prisma.$transaction([first, second]);
+prisma["$transaction"]([first, second]);

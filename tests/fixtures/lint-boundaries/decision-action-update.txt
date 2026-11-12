@@ -1,0 +1,4 @@
+tx.action.update({ where: { id }, data: { status } });
+tx["action"].update({ where: { id }, data: { status } });
+tx.action["update"]({ where: { id }, data: { status } });
+tx["action"]["update"]({ where: { id }, data: { status } });

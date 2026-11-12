@@ -1,0 +1,5 @@
+const sql = "SELECT pg_advisory_xact_lock(1)";
+const template = `SELECT pg_advisory_xact_lock(${key}::bigint)::text`;
+const tryShared = "SELECT pg_try_advisory_xact_lock_shared(1)";
+prisma.$transaction(async (tx) => tx.action.updateMany({ where: { id, status: "pending" }, data: { status: "approved" } }));
+canonicalJson(payload);

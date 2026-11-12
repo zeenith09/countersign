@@ -154,6 +154,73 @@ describe("decision queue", () => {
     });
   });
 
+  it.each(["approved", "denied"] as const)(
+    "re-fetches and displays the stored status after a successful %s decision",
+    async (outcome) => {
+      const storedStatus = outcome === "approved" ? "denied" : "approved";
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(Response.json({ actionId: action.id, outcome }))
+        .mockResolvedValueOnce(Response.json({ status: storedStatus }));
+      vi.stubGlobal("fetch", fetchMock);
+      await queueProps().onDecide(action.id, outcome);
+      expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+      const decisionState = state.setters[3].mock.calls.at(-1)?.[0];
+      const markup = renderToStaticMarkup(
+        <ActionDetails action={action} onDecide={vi.fn()} decisionState={decisionState} submitting={false} onRefresh={vi.fn()} />,
+      );
+      expect(markup).toContain(storedStatus);
+      expect(state.refresh).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["conflict", "busy", "timeout"] as const)(
+    "waits for the status re-read after %s before reporting the result",
+    async (failure) => {
+      let finishRead!: (response: Response) => void;
+      const read = new Promise<Response>((resolve) => { finishRead = resolve; });
+      const fetchMock = vi.fn();
+      if (failure === "timeout") {
+        fetchMock.mockRejectedValueOnce(new DOMException("Request timed out", "TimeoutError"));
+      } else {
+        fetchMock.mockResolvedValueOnce(new Response(null, { status: failure === "conflict" ? 409 : 503 }));
+      }
+      fetchMock.mockReturnValueOnce(read);
+      vi.stubGlobal("fetch", fetchMock);
+      const decision = queueProps().onDecide(action.id, "approved");
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+      expect(state.setters[3].mock.calls.every(([value]) => value === null)).toBe(true);
+      finishRead(Response.json({ status: "denied" }));
+      await decision;
+      const result = state.setters[3].mock.calls.at(-1)?.[0];
+      expect(result?.actionId).toBe(action.id);
+      if (failure === "conflict") {
+        expect(result?.message).toContain("Already decided by someone else");
+      } else {
+        expect(result?.message).toContain("denied");
+      }
+    },
+  );
+
+  it.each(["conflict", "busy", "timeout"] as const)(
+    "reports unknown after %s when status cannot be read",
+    async (failure) => {
+      const fetchMock = vi.fn();
+      if (failure === "timeout") {
+        fetchMock.mockRejectedValueOnce(new DOMException("Request timed out", "TimeoutError"));
+      } else {
+        fetchMock.mockResolvedValueOnce(new Response(null, { status: failure === "conflict" ? 409 : 503 }));
+      }
+      fetchMock.mockRejectedValueOnce(new Error("status unavailable"));
+      vi.stubGlobal("fetch", fetchMock);
+      await queueProps().onDecide(action.id, "approved");
+      expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+      expect(state.setters[3].mock.calls.at(-1)?.[0]).toMatchObject({
+        actionId: action.id, message: expect.stringContaining("unknown"), locked: true,
+      });
+    },
+  );
+
   it("does not submit a second decision while the first is in flight", async () => {
     let finish!: (response: Response) => void;
     const fetchMock = vi.fn().mockReturnValue(new Promise<Response>((resolve) => { finish = resolve; }));
