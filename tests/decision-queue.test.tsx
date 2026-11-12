@@ -90,14 +90,18 @@ describe("decision queue", () => {
   });
 
   it.each(["approved", "denied"] as const)("sends the selected action and %s decision", async (outcome) => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ status: outcome }));
     vi.stubGlobal("fetch", fetchMock);
     await queueProps().onDecide(action.id, outcome);
-    expect(fetchMock).toHaveBeenCalledWith(`/api/actions/${action.id}/decision`, {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, `/api/actions/${action.id}/decision`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reviewer: "Reviewer", outcome, reason: "Reason" }),
     });
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
+    expect(state.setters[3].mock.calls.at(-1)?.[0].message).toContain(`Current status: ${outcome}`);
     expect(state.refresh).toHaveBeenCalledOnce();
   });
 
@@ -169,9 +173,26 @@ describe("decision queue", () => {
         <ActionDetails action={action} onDecide={vi.fn()} decisionState={decisionState} submitting={false} onRefresh={vi.fn()} />,
       );
       expect(markup).toContain(storedStatus);
-      expect(state.refresh).not.toHaveBeenCalled();
+      expect(state.refresh).toHaveBeenCalledOnce();
     },
   );
+
+  it("distinguishes a committed decision from an unavailable status read", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockRejectedValueOnce(new Error("status unavailable"));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(state.setters[3]).toHaveBeenLastCalledWith({
+      actionId: action.id,
+      message: "Server confirmed the decision, but the stored status couldn't be refreshed. Refresh the queue to check.",
+      refreshAvailable: true,
+      locked: true,
+    });
+    expect(state.refresh).toHaveBeenCalledOnce();
+  });
 
   it.each(["conflict", "busy", "timeout"] as const)(
     "waits for the status re-read after %s before reporting the result",

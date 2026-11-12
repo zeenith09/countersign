@@ -43,7 +43,16 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
         body: JSON.stringify({ reviewer, outcome, reason }),
       });
       if (response.ok) {
-        setDecisionState({ actionId: id, message: outcome === "approved" ? "Action approved." : "Action denied.", locked: true });
+        let status = await readStatus(id);
+        if (!status) status = await readStatus(id);
+        setDecisionState({
+          actionId: id,
+          message: status
+            ? `Decision committed. Current status: ${status}.`
+            : "Server confirmed the decision, but the stored status couldn't be refreshed. Refresh the queue to check.",
+          ...(!status && { refreshAvailable: true }),
+          locked: true,
+        });
         router.refresh();
       } else if (response.status === 409) {
         const status = await readStatus(id);

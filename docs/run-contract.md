@@ -31,14 +31,19 @@ The database action row, conditionally updated and read inside the decision
 transaction, determines whether the action can be decided and supplies the tool
 and original parameters. The console's queue snapshot and the agent's account
 are not authoritative. After conflict, busy, timeout, or uncertainty, re-read
-the action by ID; if its status cannot be verified, report `unknown`.
+the action by ID; after a successful decision response, also re-read by ID and
+show the stored status before refreshing the queue. If the decision response
+succeeded but the status read fails, say the decision was committed but its
+stored status could not be refreshed; do not call the outcome unknown.
 
 ## Completion evidence
 
-Report `approved` or `denied` only after commit, together with the decision row
-and `action_decided` audit entry. Report `executed` only with the mocked tool's
-result. Otherwise distinguish `approved, not yet executed` from `unknown`;
-approval itself is not evidence that execution happened.
+Report `approved` or `denied` only after commit, and show the status read back
+from the database. If that read fails after a successful decision response,
+report that commit was confirmed but the stored status remains unverified.
+Report `executed` only with the mocked tool's result. Otherwise distinguish
+`approved, not yet executed` from `unknown`; approval itself is not evidence
+that execution happened.
 
 ## Owner
 
