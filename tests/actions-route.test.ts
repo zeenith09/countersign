@@ -156,7 +156,7 @@ describe("action submission gateway", () => {
         policyRuleMatched: "other-refunds-allowed",
       }),
     }));
-    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
+    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId, baseAction.parameters);
     expect(create.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(toolRegistry.issue_refund).mock.invocationCallOrder[0],
     );
@@ -241,7 +241,7 @@ describe("action submission gateway", () => {
       releaseCommit();
     }
     expect((await response).status).toBe(201);
-    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
+    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId, baseAction.parameters);
   });
 
   it.each([
@@ -303,7 +303,7 @@ describe("action submission gateway", () => {
     expect(body).toMatchObject({ actionId, outcome, ruleId, status });
     if (outcome === "allow") {
       expect(body.result).toEqual({ mocked: true, tool: "send_email" });
-      expect(toolRegistry.send_email).toHaveBeenCalledExactlyOnceWith(actionId);
+      expect(toolRegistry.send_email).toHaveBeenCalledExactlyOnceWith(actionId, parameters);
     } else {
       expect(toolRegistry.send_email).not.toHaveBeenCalled();
     }
@@ -412,7 +412,7 @@ describe("action submission gateway", () => {
     }));
     expect(update).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
-    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
+    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId, baseAction.parameters);
     expect(create.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(toolRegistry.issue_refund).mock.invocationCallOrder[0],
     );
@@ -436,7 +436,7 @@ describe("action submission gateway", () => {
     const response = await responsePromise;
 
     expect(response.status).toBe(201);
-    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId);
+    expect(toolRegistry.issue_refund).toHaveBeenCalledExactlyOnceWith(actionId, baseAction.parameters);
   });
 });
 
@@ -454,16 +454,16 @@ describe("mocked tool registry", () => {
   });
 
   it.each(["send_email", "issue_refund", "delete_record"] as const)(
-    "%s logs only its name and action ID",
+    "%s reports parameter presence without logging parameter values",
     (tool) => {
       const log = vi.spyOn(console, "log").mockImplementation(() => {});
-      expect(() => toolRegistry[tool](actionId)).not.toThrow();
+      expect(() => toolRegistry[tool](actionId, baseAction.parameters)).not.toThrow();
       expect(log).toHaveBeenCalledOnce();
       expect(log.mock.calls[0].join(" ")).toContain(tool);
       expect(log.mock.calls[0].join(" ")).toContain(actionId);
       expect(log.mock.calls[0].join(" ")).not.toContain(baseAction.agentReasoning);
       expect(log.mock.calls[0].join(" ")).not.toContain("500");
-      expect(log.mock.calls[0].join(" ")).toBe(`${tool} ${actionId}`);
+      expect(log.mock.calls[0].join(" ")).toBe(`${tool} ${actionId} with parameters`);
     },
   );
 });

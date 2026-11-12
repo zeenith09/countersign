@@ -53,7 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw new Error("Approved action has an unsupported tool.");
     }
     const tool = result.tool as keyof typeof toolRegistry;
-    toolRegistry[tool](id);
+    toolRegistry[tool](id, result.parameters);
   }
   return Response.json({
     actionId: id,
