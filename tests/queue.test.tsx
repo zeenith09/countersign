@@ -8,6 +8,7 @@ const { connection, findMany } = vi.hoisted(() => ({
   findMany: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("next/server", () => ({ connection }));
 vi.mock("../src/lib/prisma", () => ({
   getPrisma: () => ({ action: { findMany } }),

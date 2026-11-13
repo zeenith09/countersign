@@ -61,6 +61,7 @@ describe("QueueList selection", () => {
       policyRuleMatched: null,
     },
   ];
+  const props = { actions, onDecide: vi.fn(), decisionState: null, submitting: false, onRefresh: vi.fn() };
 
   beforeEach(() => {
     selection.selectedId = null;
@@ -71,33 +72,33 @@ describe("QueueList selection", () => {
   });
 
   it("shows each rule label and toggles details for the selected action", () => {
-    const initial = renderToStaticMarkup(QueueList({ actions }));
+    const initial = renderToStaticMarkup(QueueList(props));
     expect(initial).toContain("Matched rule: refund-over-500");
     expect(initial).toContain("Matched rule: Not recorded");
     expect(initial.match(/Select action/g)).toHaveLength(2);
     expect(initial).not.toContain("Action details");
 
-    const firstButton = findSelectButton(QueueList({ actions }), "issue_refund");
+    const firstButton = findSelectButton(QueueList(props), "issue_refund");
     expect(firstButton?.props["aria-pressed"]).toBe(false);
     firstButton?.props.onClick?.(undefined as never);
 
-    const firstSelected = renderToStaticMarkup(QueueList({ actions }));
+    const firstSelected = renderToStaticMarkup(QueueList(props));
     expect(firstSelected).toContain(">Selected</button>");
     expect(firstSelected).toContain("Action details");
     expect(firstSelected).toContain("Refund request");
 
-    const secondButton = findSelectButton(QueueList({ actions }), "send_email");
+    const secondButton = findSelectButton(QueueList(props), "send_email");
     expect(secondButton?.props["aria-pressed"]).toBe(false);
     secondButton?.props.onClick?.(undefined as never);
 
-    const secondSelected = renderToStaticMarkup(QueueList({ actions }));
+    const secondSelected = renderToStaticMarkup(QueueList(props));
     expect(secondSelected).toContain("Email request");
     expect(secondSelected).toContain('aria-pressed="true"');
 
-    const selectedSecondButton = findSelectButton(QueueList({ actions }), "send_email");
+    const selectedSecondButton = findSelectButton(QueueList(props), "send_email");
     selectedSecondButton?.props.onClick?.(undefined as never);
 
-    const deselected = renderToStaticMarkup(QueueList({ actions }));
+    const deselected = renderToStaticMarkup(QueueList(props));
     expect(deselected).not.toContain("Action details");
     expect(deselected.match(/Select action/g)).toHaveLength(2);
     expect(deselected).not.toContain('aria-pressed="true"');

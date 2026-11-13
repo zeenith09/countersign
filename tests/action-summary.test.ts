@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { seedActions } from "../prisma/seed-actions";
 import { summarizeAction } from "../src/app/action-summary";
 import { ActionDetails, QueueList } from "../src/app/queue-list";
@@ -33,10 +33,9 @@ describe("action summary", () => {
       age: "just now",
       policyRuleMatched: "other-refunds-allowed",
     };
-    const html = renderToStaticMarkup(createElement(ActionDetails, {
-      action,
-    }));
-    const queueHtml = renderToStaticMarkup(createElement(QueueList, { actions: [action] }));
+    const decisionProps = { onDecide: vi.fn(), decisionState: null, submitting: false, onRefresh: vi.fn() };
+    const html = renderToStaticMarkup(createElement(ActionDetails, { action, ...decisionProps }));
+    const queueHtml = renderToStaticMarkup(createElement(QueueList, { actions: [action], ...decisionProps }));
 
     expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
     expect(queueHtml).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");

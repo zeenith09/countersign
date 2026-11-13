@@ -99,7 +99,7 @@ export async function handleActionSubmission(
   }
 
   try {
-    const toolResult = toolRegistry[action.tool](stored.id);
+    const toolResult = toolRegistry[action.tool](stored.id, action.parameters);
     return Response.json({ ...result, result: toolResult }, { status: 201 });
   } catch {
     return Response.json({
