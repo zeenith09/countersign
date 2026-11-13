@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
-  values: ["Reviewer", "Reason", false, null] as unknown[],
-  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  values: ["Reviewer", "Reason", false, null, null] as unknown[],
+  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
   index: 0,
   inFlight: { current: false },
   refresh: vi.fn(),
@@ -59,9 +59,23 @@ function findButton(node: ReactNode, text: string): ReactElement<{ onClick?: () 
   return findButton(node.props.children, text);
 }
 
+function findInputs(node: ReactNode): ReactElement<{
+  onChange?: (event: { target: { value: string } }) => void;
+}>[] {
+  if (Array.isArray(node)) return node.flatMap(findInputs);
+  if (!isValidElement<{ children?: ReactNode; onChange?: (event: { target: { value: string } }) => void }>(node)) {
+    return [];
+  }
+  const inputs = node.type === "input"
+    ? [node as ReactElement<{ onChange?: (event: { target: { value: string } }) => void }>]
+    : [];
+  return [...inputs, ...findInputs(node.props.children)];
+}
+
 describe("decision queue", () => {
   beforeEach(() => {
-    state.values = ["Reviewer", "Reason", false, null];
+    state.values = ["Reviewer", "Reason", false, null, null];
+    state.index = 0;
     state.inFlight.current = false;
     state.refresh.mockReset();
     state.setters.forEach((setter) => setter.mockReset());
@@ -87,6 +101,27 @@ describe("decision queue", () => {
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(findButton(conflict, "Approve")?.props.disabled).toBe(true);
     expect(findButton(conflict, "Deny")?.props.disabled).toBe(true);
+  });
+
+  it("renders reviewer inputs and wires the queue refresh callback", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("window", { location: { reload } });
+    const tree = DecisionQueue({ actions: [action] });
+    const markup = renderToStaticMarkup(tree);
+    expect(markup).toContain("Reviewer name");
+    expect(markup).toContain("Reason");
+    expect(markup).toContain('maxLength="100"');
+    expect(markup).toContain('maxLength="2000"');
+    const inputs = findInputs(tree);
+    expect(inputs).toHaveLength(2);
+    inputs[0].props.onChange?.({ target: { value: "New reviewer" } });
+    inputs[1].props.onChange?.({ target: { value: "New reason" } });
+    expect(state.setters[0]).toHaveBeenCalledWith("New reviewer");
+    expect(state.setters[1]).toHaveBeenCalledWith("New reason");
+
+    const props = queueProps();
+    props.onRefresh();
+    expect(reload).toHaveBeenCalledOnce();
   });
 
   it.each(["approved", "denied"] as const)("sends the selected action and %s decision", async (outcome) => {
@@ -156,6 +191,62 @@ describe("decision queue", () => {
       refreshAvailable: true,
       locked: true,
     });
+  });
+
+  it("re-reads status after a server error response", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(Response.json({ status: "approved" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "denied");
+    expect(state.setters[3]).toHaveBeenLastCalledWith({
+      actionId: action.id,
+      message: "Decision could not be confirmed. Current status: approved. Refresh the queue before trying again.",
+      refreshAvailable: true,
+      locked: true,
+    });
+  });
+
+  it("shows a retryable message for a non-server decision error", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(null, { status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "denied");
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(state.setters[3]).toHaveBeenLastCalledWith({
+      actionId: action.id,
+      message: "Decision request failed (400). Refresh the queue and try again.",
+      refreshAvailable: true,
+      locked: false,
+    });
+  });
+
+  it.each([
+    ["pending", "pending"],
+    ["approved", "approved"],
+    ["denied", "denied"],
+    ["auto_allowed", "auto_allowed"],
+    ["blocked", "blocked"],
+  ])("recognizes the stored status %s", async (status, expected) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ status }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(state.setters[3].mock.calls.at(-1)?.[0].message).toContain(`Current status: ${expected}`);
+  });
+
+  it.each([
+    ["string body", "not-an-object"],
+    ["null body", null],
+    ["object without a status", {}],
+    ["unsupported status", { status: "unknown-status" }],
+  ])("reports unknown for a status response with %s", async (_case, body) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(state.setters[3].mock.calls.at(-1)?.[0].message).toContain("Current status: unknown");
   });
 
   it.each(["approved", "denied"] as const)(
