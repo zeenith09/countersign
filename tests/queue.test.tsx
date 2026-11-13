@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seedActions } from "../prisma/seed-actions";
 import { AssessmentStatus, formatAge } from "../src/app/queue-display";
+import { policy } from "../src/lib/policy/policy";
 
 const { connection, findMany } = vi.hoisted(() => ({
   connection: vi.fn(),
@@ -32,7 +33,7 @@ describe("approval queue", () => {
         parameters: seedActions[0].parameters,
         agentReasoning: seedActions[0].agentReasoning,
         createdAt: new Date("2026-01-01T10:00:00Z"),
-        policyRuleMatched: "example-rule",
+        policyRuleMatched: "refund-over-500",
       },
     ]);
 
@@ -51,10 +52,26 @@ describe("approval queue", () => {
     expect(markup).toContain("2 hours ago");
     expect(markup).toContain("Pending approval");
     expect(markup).toContain("Risk not assessed");
-    expect(markup).toContain("Matched rule: example-rule");
+    expect(markup).toContain(`Matched policy rule: </span>refund-over-500 — ${policy.rules.find((rule) => rule.id === "refund-over-500")?.description}`);
     expect(markup).toContain('aria-pressed="false"');
     expect(markup).toContain(`Select ${seedActions[0].tool}: ${seedActions[0].agentReasoning}`);
     expect(markup).not.toContain('class="truncate"');
+  });
+
+  it("uses the policy file descriptions for all five configured rules", async () => {
+    findMany.mockResolvedValue(policy.rules.map((rule, index) => ({
+      id: `${seedActions[0].id}-${index}`,
+      tool: rule.tool,
+      parameters: seedActions[0].parameters,
+      agentReasoning: seedActions[0].agentReasoning,
+      createdAt: new Date("2026-01-01T10:00:00Z"),
+      policyRuleMatched: rule.id,
+    })));
+
+    const markup = renderToStaticMarkup(await Home());
+    for (const rule of policy.rules) {
+      expect(markup).toContain(`${rule.id} — ${rule.description}`);
+    }
   });
 
   it("supports the four assessment statuses as text", () => {

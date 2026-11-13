@@ -24,14 +24,29 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [decisionState, setDecisionState] = useState<DecisionState>(null);
+  const [formError, setFormError] = useState<{ field: "reviewer" | "reason"; message: string } | null>(null);
+  const [confirmation, setConfirmation] = useState<{ actionId: string; outcome: DecisionOutcome } | null>(null);
   const inFlight = useRef(false);
+  const confirmationTrigger = useRef<HTMLElement | null>(null);
+
+  function validateReview(): boolean {
+    if (!reviewer.trim()) {
+      setFormError({ field: "reviewer", message: "Enter a reviewer name." });
+      document.getElementById("reviewer-name")?.focus();
+      return false;
+    }
+    if (!reason.trim()) {
+      setFormError({ field: "reason", message: "Enter a reason." });
+      document.getElementById("decision-reason")?.focus();
+      return false;
+    }
+    setFormError(null);
+    return true;
+  }
 
   async function decide(id: string, outcome: DecisionOutcome) {
     if (inFlight.current) return;
-    if (!reviewer.trim() || !reason.trim()) {
-      setDecisionState({ actionId: id, message: "Enter a reviewer and reason.", locked: false });
-      return;
-    }
+    if (!validateReview()) return;
 
     inFlight.current = true;
     setSubmitting(true);
@@ -87,19 +102,143 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
     }
   }
 
+  function requestDecision(id: string, outcome: DecisionOutcome, trigger?: HTMLElement) {
+    const action = actions.find((candidate) => candidate.id === id);
+    const needsConfirmation = action && (
+      (outcome === "denied" && action.policyRuleMatched === "refund-over-500") ||
+      (outcome === "approved" && action.tool === "delete_record")
+    );
+    if (needsConfirmation) {
+      if (!validateReview()) return;
+      confirmationTrigger.current = trigger ?? null;
+      setConfirmation({ actionId: id, outcome });
+      return;
+    }
+    return decide(id, outcome);
+  }
+
+  function closeConfirmation() {
+    setConfirmation(null);
+    confirmationTrigger.current?.focus();
+  }
+
+  const confirmationAction = confirmation
+    ? actions.find((action) => action.id === confirmation.actionId)
+    : undefined;
+
   return (
     <>
       <div className="mt-4 flex flex-wrap gap-4">
         <label className="flex flex-col gap-1">
           Reviewer name
-          <input className="border px-2" value={reviewer} maxLength={100} onChange={(event) => setReviewer(event.target.value)} />
+          <input
+            id="reviewer-name"
+            className="border px-2"
+            value={reviewer}
+            maxLength={100}
+            required
+            aria-invalid={formError?.field === "reviewer"}
+            aria-describedby="reviewer-name-error"
+            onChange={(event) => {
+              setReviewer(event.target.value);
+              if (formError?.field === "reviewer") setFormError(null);
+            }}
+          />
+          <span id="reviewer-name-error" role="alert">
+            {formError?.field === "reviewer" ? formError.message : ""}
+          </span>
         </label>
         <label className="flex flex-col gap-1">
           Reason
-          <input className="border px-2" value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} />
+          <input
+            id="decision-reason"
+            className="border px-2"
+            value={reason}
+            maxLength={2000}
+            required
+            aria-invalid={formError?.field === "reason"}
+            aria-describedby="decision-reason-error"
+            onChange={(event) => {
+              setReason(event.target.value);
+              if (formError?.field === "reason") setFormError(null);
+            }}
+          />
+          <span id="decision-reason-error" role="alert">
+            {formError?.field === "reason" ? formError.message : ""}
+          </span>
         </label>
       </div>
-      <QueueList actions={actions} onDecide={decide} decisionState={decisionState} submitting={submitting} onRefresh={() => window.location.reload()} />
+      <QueueList actions={actions} onDecide={requestDecision} decisionState={decisionState} submitting={submitting} onRefresh={() => window.location.reload()} />
+      {confirmation && confirmationAction && (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="decision-confirmation-title"
+            aria-describedby="decision-confirmation-description"
+            tabIndex={-1}
+            ref={(dialog) => {
+              if (dialog) {
+                const focusable = dialog.querySelector<HTMLElement>("button:not([disabled])");
+                (focusable ?? dialog).focus();
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeConfirmation();
+                return;
+              }
+              if (event.key !== "Tab") return;
+              const focusable = event.currentTarget.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+              );
+              const first = focusable.item(0);
+              const last = focusable.item(focusable.length - 1);
+              if (!first || !last) {
+                event.preventDefault();
+                event.currentTarget.focus();
+              } else if (event.shiftKey && (document.activeElement === first || !event.currentTarget.contains(document.activeElement))) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && (document.activeElement === last || !event.currentTarget.contains(document.activeElement))) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+            className="w-full max-w-md border bg-white p-6 text-black shadow-xl"
+          >
+            <h2 id="decision-confirmation-title" className="text-xl font-semibold">
+              {confirmation.outcome === "denied" ? "Confirm denial" : "Confirm approval"}
+            </h2>
+            <p id="decision-confirmation-description" className="mt-2">
+              {confirmation.outcome === "denied"
+                ? "This action matched the refund-over-500 rule. Are you sure you want to deny it?"
+                : "This will approve the requested record deletion. Continue?"}
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeConfirmation}
+                className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { actionId, outcome } = confirmation;
+                  closeConfirmation();
+                  void decide(actionId, outcome);
+                }}
+                className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                {confirmation.outcome === "denied" ? "Confirm denial" : "Confirm approval"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

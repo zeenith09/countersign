@@ -1,8 +1,9 @@
 import { connection } from "next/server";
 import { getPrisma } from "../lib/prisma";
+import { policy } from "../lib/policy/policy";
 import { formatAge } from "./queue-display";
 import { DecisionQueue } from "./decision-queue";
-import { summarizeAction } from "./action-summary";
+import { summarizeAction, summarizeActionParts } from "./action-summary";
 
 async function getQueueSnapshot() {
   const actions = await getPrisma().action.findMany({
@@ -37,10 +38,14 @@ export default async function Home() {
               tool: action.tool,
               parameters: action.parameters,
               summary: summarizeAction(action.tool, action.parameters),
+              summaryParts: summarizeActionParts(action.tool, action.parameters),
               agentReasoning: action.agentReasoning,
               createdAt: action.createdAt.toISOString(),
               age: formatAge(action.createdAt, now),
               policyRuleMatched: action.policyRuleMatched,
+              policyRuleDescription: policy.rules.find(
+                (rule) => rule.id === action.policyRuleMatched,
+              )?.description ?? null,
             }))}
           />
         )}

@@ -28,10 +28,12 @@ describe("action summary", () => {
       tool: "issue_refund",
       parameters: { amount: 500, currency: "USD", orderId: hostileText },
       summary: hostileText,
+      summaryParts: [{ type: "text" as const, value: hostileText }],
       agentReasoning: hostileText,
       createdAt: "2026-01-01T00:00:00.000Z",
       age: "just now",
       policyRuleMatched: "other-refunds-allowed",
+      policyRuleDescription: "Refunds not matched by the over-$500 rule are allowed.",
     };
     const decisionProps = { onDecide: vi.fn(), decisionState: null, submitting: false, onRefresh: vi.fn() };
     const html = renderToStaticMarkup(createElement(ActionDetails, { action, ...decisionProps }));
