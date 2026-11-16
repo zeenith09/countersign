@@ -141,7 +141,7 @@ export function QueuePage({
         <div className="receipt-icon"><Icon name="shield" /></div>
         <div>
           <h2>Policy outcomes stay out of this queue</h2>
-          <p>
+          <p className="policy-receipt-description">
             Auto-allowed and blocked proposals appear in activity history, clearly separated from
             human decisions.
           </p>
