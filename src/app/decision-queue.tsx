@@ -26,8 +26,11 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
   const [decisionState, setDecisionState] = useState<DecisionState>(null);
   const [formError, setFormError] = useState<{ field: "reviewer" | "reason"; message: string } | null>(null);
   const [confirmation, setConfirmation] = useState<{ actionId: string; outcome: DecisionOutcome } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
   const inFlight = useRef(false);
   const confirmationTrigger = useRef<HTMLElement | null>(null);
+  const announcementRef = useRef<HTMLParagraphElement | null>(null);
+  const confirmationDialogRef = useRef<HTMLDialogElement | null>(null);
 
   function validateReview(): boolean {
     if (!reviewer.trim()) {
@@ -51,6 +54,7 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
     inFlight.current = true;
     setSubmitting(true);
     setDecisionState(null);
+    setAnnouncement(`Submitting ${outcome === "approved" ? "approval" : "denial"} decision.`);
     try {
       const response = await fetch(`/api/actions/${encodeURIComponent(id)}/decision`, {
         method: "POST",
@@ -60,20 +64,23 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
       if (response.ok) {
         let status = await readStatus(id);
         if (!status) status = await readStatus(id);
+        const message = status
+          ? `Decision committed. Current status: ${status}.`
+          : "Server confirmed the decision, but the stored status couldn't be refreshed. Refresh the queue to check.";
         setDecisionState({
           actionId: id,
-          message: status
-            ? `Decision committed. Current status: ${status}.`
-            : "Server confirmed the decision, but the stored status couldn't be refreshed. Refresh the queue to check.",
+          message,
           ...(!status && { refreshAvailable: true }),
           locked: true,
         });
+        setAnnouncement(message);
+        announcementRef.current?.focus();
         router.refresh();
       } else if (response.status === 409) {
         const status = await readStatus(id);
         setDecisionState({
           actionId: id,
-          message: `Already decided by someone else${status ? "" : ". Current status: unknown."}`,
+          message: `The server rejected this decision because the action is no longer pending. Current status: ${status ?? "unknown"}. Refresh the queue before continuing.`,
           refreshAvailable: true,
           locked: true,
         });
@@ -81,18 +88,22 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
         const status = await readStatus(id);
         setDecisionState({
           actionId: id,
-          message: `Decision could not be confirmed. Current status: ${status ?? "unknown"}. Refresh the queue before trying again.`,
+          message: `The server could not confirm the decision (HTTP ${response.status}). Current status: ${status ?? "unknown"}. Refresh the queue before trying again.`,
           refreshAvailable: true,
           locked: true,
         });
       } else {
-        setDecisionState({ actionId: id, message: `Decision request failed (${response.status}). Refresh the queue and try again.`, refreshAvailable: true, locked: false });
+        setDecisionState({
+          actionId: id,
+          message: `The decision request was rejected (HTTP ${response.status}). Check the reviewer name and reason, then try again.`,
+          locked: false,
+        });
       }
     } catch {
       const status = await readStatus(id);
       setDecisionState({
         actionId: id,
-        message: `Decision could not be confirmed. Current status: ${status ?? "unknown"}. Refresh the queue before trying again.`,
+        message: `A network error interrupted the decision request. Current status: ${status ?? "unknown"}. Refresh the queue before trying again.`,
         refreshAvailable: true,
         locked: true,
       });
@@ -118,6 +129,7 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
   }
 
   function closeConfirmation() {
+    confirmationDialogRef.current?.close();
     setConfirmation(null);
     confirmationTrigger.current?.focus();
   }
@@ -133,7 +145,7 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
           Reviewer name
           <input
             id="reviewer-name"
-            className="border px-2"
+            className="border px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
             value={reviewer}
             maxLength={100}
             required
@@ -152,7 +164,7 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
           Reason
           <input
             id="decision-reason"
-            className="border px-2"
+            className="border px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
             value={reason}
             maxLength={2000}
             required
@@ -168,76 +180,67 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
           </span>
         </label>
       </div>
+      <p
+        id="decision-announcement"
+        ref={announcementRef}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        tabIndex={-1}
+        className="mt-2"
+      >
+        {announcement}
+      </p>
       <QueueList actions={actions} onDecide={requestDecision} decisionState={decisionState} submitting={submitting} onRefresh={() => window.location.reload()} />
       {confirmation && confirmationAction && (
-        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/50 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="decision-confirmation-title"
-            aria-describedby="decision-confirmation-description"
-            tabIndex={-1}
-            ref={(dialog) => {
-              if (dialog) {
-                const focusable = dialog.querySelector<HTMLElement>("button:not([disabled])");
-                (focusable ?? dialog).focus();
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
+        <dialog
+          ref={(dialog) => {
+            confirmationDialogRef.current = dialog;
+            if (dialog && !dialog.open) {
+              dialog.showModal();
+              const focusable = dialog.querySelector<HTMLElement>("button:not([disabled])");
+              (focusable ?? dialog).focus();
+            }
+          }}
+          onCancel={(event) => {
+            event.preventDefault();
+            closeConfirmation();
+          }}
+          aria-modal="true"
+          aria-labelledby="decision-confirmation-title"
+          aria-describedby="decision-confirmation-description"
+          tabIndex={-1}
+          className="fixed inset-0 m-auto w-full max-w-md border bg-white p-6 text-black shadow-xl backdrop:bg-black/50"
+        >
+          <h2 id="decision-confirmation-title" className="text-xl font-semibold">
+            {confirmation.outcome === "denied" ? "Confirm denial" : "Confirm approval"}
+          </h2>
+          <p id="decision-confirmation-description" className="mt-2">
+            {confirmation.outcome === "denied"
+              ? "This action matched the refund-over-500 rule. Are you sure you want to deny it?"
+              : "This will approve the requested record deletion. Continue?"}
+          </p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeConfirmation}
+              className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const { actionId, outcome } = confirmation;
                 closeConfirmation();
-                return;
-              }
-              if (event.key !== "Tab") return;
-              const focusable = event.currentTarget.querySelectorAll<HTMLElement>(
-                'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-              );
-              const first = focusable.item(0);
-              const last = focusable.item(focusable.length - 1);
-              if (!first || !last) {
-                event.preventDefault();
-                event.currentTarget.focus();
-              } else if (event.shiftKey && (document.activeElement === first || !event.currentTarget.contains(document.activeElement))) {
-                event.preventDefault();
-                last.focus();
-              } else if (!event.shiftKey && (document.activeElement === last || !event.currentTarget.contains(document.activeElement))) {
-                event.preventDefault();
-                first.focus();
-              }
-            }}
-            className="w-full max-w-md border bg-white p-6 text-black shadow-xl"
-          >
-            <h2 id="decision-confirmation-title" className="text-xl font-semibold">
+                void decide(actionId, outcome);
+              }}
+              className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
               {confirmation.outcome === "denied" ? "Confirm denial" : "Confirm approval"}
-            </h2>
-            <p id="decision-confirmation-description" className="mt-2">
-              {confirmation.outcome === "denied"
-                ? "This action matched the refund-over-500 rule. Are you sure you want to deny it?"
-                : "This will approve the requested record deletion. Continue?"}
-            </p>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeConfirmation}
-                className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const { actionId, outcome } = confirmation;
-                  closeConfirmation();
-                  void decide(actionId, outcome);
-                }}
-                className="border px-3 py-1 focus-visible:outline-2 focus-visible:outline-offset-2"
-              >
-                {confirmation.outcome === "denied" ? "Confirm denial" : "Confirm approval"}
-              </button>
-            </div>
+            </button>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   values: ["Reviewer", "Reason", false, null, null] as unknown[],
-  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
   index: 0,
-  refs: [{ current: false as boolean | HTMLElement | null }, { current: null as HTMLElement | null }],
+  refs: [
+    { current: false as boolean | HTMLElement | null },
+    { current: null as HTMLElement | null },
+    { current: null as HTMLElement | null },
+    { current: null as HTMLElement | null },
+  ],
   refIndex: 0,
   refresh: vi.fn(),
 }));
@@ -85,8 +90,9 @@ function findInputs(node: ReactNode): ReactElement<{
 
 function findDialog(node: ReactNode): ReactElement<{
   children?: ReactNode;
-  role?: string;
-  onKeyDown?: (event: { key: string; preventDefault: () => void }) => void;
+  "aria-modal"?: boolean;
+  onCancel?: (event: { preventDefault: () => void }) => void;
+  ref?: (node: HTMLDialogElement | null) => void;
 }> | undefined {
   if (Array.isArray(node)) {
     for (const child of node) {
@@ -97,20 +103,23 @@ function findDialog(node: ReactNode): ReactElement<{
   }
   if (!isValidElement<{
     children?: ReactNode;
-    role?: string;
-    onKeyDown?: (event: { key: string; preventDefault: () => void }) => void;
+    "aria-modal"?: boolean;
+    onCancel?: (event: { preventDefault: () => void }) => void;
+    ref?: (node: HTMLDialogElement | null) => void;
   }>(node)) return undefined;
-  if (node.props.role === "dialog") return node;
+  if (node.type === "dialog") return node;
   return findDialog(node.props.children);
 }
 
 describe("decision queue", () => {
   beforeEach(() => {
-    state.values = ["Reviewer", "Reason", false, null, null, null];
+    state.values = ["Reviewer", "Reason", false, null, null, null, ""];
     state.index = 0;
     state.refIndex = 0;
     state.refs[0].current = false;
     state.refs[1].current = null;
+    state.refs[2].current = null;
+    state.refs[3].current = null;
     state.refresh.mockReset();
     state.setters.forEach((setter) => setter.mockReset());
   });
@@ -127,7 +136,7 @@ describe("decision queue", () => {
     findButton(details, "Deny")?.props.onClick?.({ currentTarget: denyTrigger });
     expect(onDecide).toHaveBeenNthCalledWith(1, action.id, "approved", approveTrigger);
     expect(onDecide).toHaveBeenNthCalledWith(2, action.id, "denied", denyTrigger);
-    expect(findButton(details, "Edit")?.props.disabled).toBe(true);
+    expect(findButton(details, "Edit")).toBeUndefined();
 
     const conflict = ActionDetails({
       action, onDecide, submitting: false, onRefresh,
@@ -176,6 +185,19 @@ describe("decision queue", () => {
     expect(state.refresh).toHaveBeenCalledOnce();
   });
 
+  it("announces a pending decision and focuses the persistent status after commit", async () => {
+    const focus = vi.fn();
+    state.refs[2].current = { focus } as unknown as HTMLElement;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ status: "approved" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(state.setters[6]).toHaveBeenNthCalledWith(1, "Submitting approval decision.");
+    expect(state.setters[6]).toHaveBeenLastCalledWith("Decision committed. Current status: approved.");
+    expect(focus).toHaveBeenCalledOnce();
+  });
+
   it("requires a non-blank reason and moves focus to the reason field", async () => {
     state.values[1] = "   ";
     const fetchMock = vi.fn();
@@ -221,7 +243,7 @@ describe("decision queue", () => {
     expect(state.setters[5]).toHaveBeenCalledWith({ actionId: deleteAction.id, outcome: "approved" });
   });
 
-  it("renders a modal confirmation and returns focus to its trigger on Escape", () => {
+  it("uses a native modal dialog and returns focus to its trigger on Escape", () => {
     const highRiskAction = { ...action, policyRuleMatched: "refund-over-500" };
     const trigger = { focus: vi.fn() } as unknown as HTMLElement;
     queueProps([highRiskAction]).onDecide(highRiskAction.id, "denied", trigger);
@@ -230,44 +252,38 @@ describe("decision queue", () => {
     state.refIndex = 0;
     const tree = DecisionQueue({ actions: [highRiskAction] });
     const markup = renderToStaticMarkup(tree);
-    expect(markup).toContain('role="dialog"');
+    expect(markup).toContain("<dialog");
     expect(markup).toContain('aria-modal="true"');
     expect(markup).toContain("This action matched the refund-over-500 rule.");
 
     const dialog = findDialog(tree);
     if (!dialog) throw new Error("Confirmation dialog not rendered");
+    const firstButton = { focus: vi.fn() };
+    const nativeDialog = {
+      open: false,
+      showModal: vi.fn(),
+      close: vi.fn(),
+      querySelector: vi.fn(() => firstButton),
+      focus: vi.fn(),
+    } as unknown as HTMLDialogElement;
+    dialog.props.ref?.(nativeDialog);
+    expect(nativeDialog.showModal).toHaveBeenCalledOnce();
+    expect(firstButton.focus).toHaveBeenCalledOnce();
     const preventDefault = vi.fn();
-    dialog.props.onKeyDown?.({ key: "Escape", preventDefault });
+    dialog.props.onCancel?.({ preventDefault });
     expect(preventDefault).toHaveBeenCalledOnce();
+    expect(nativeDialog.close).toHaveBeenCalledOnce();
     expect(trigger.focus).toHaveBeenCalledOnce();
     expect(state.setters[5]).toHaveBeenLastCalledWith(null);
   });
 
-  it("traps forward keyboard focus inside the confirmation dialog", () => {
+  it("renders a native dialog with modal accessibility state", () => {
     const highRiskAction = { ...action, policyRuleMatched: "refund-over-500" };
     state.values[5] = { actionId: highRiskAction.id, outcome: "denied" };
     const tree = DecisionQueue({ actions: [highRiskAction] });
     const dialog = findDialog(tree);
-    if (!dialog?.props.onKeyDown) throw new Error("Confirmation dialog not rendered");
-
-    const first = { focus: vi.fn() } as unknown as HTMLElement;
-    const last = { focus: vi.fn() } as unknown as HTMLElement;
-    const currentTarget = {
-      querySelectorAll: () => ({ length: 2, item: (index: number) => index === 0 ? first : last }),
-      contains: () => true,
-      focus: vi.fn(),
-    };
-    vi.stubGlobal("document", { activeElement: last });
-    const preventDefault = vi.fn();
-    const onKeyDown = dialog.props.onKeyDown as (event: {
-      key: string;
-      shiftKey: boolean;
-      preventDefault: () => void;
-      currentTarget: typeof currentTarget;
-    }) => void;
-    onKeyDown({ key: "Tab", shiftKey: false, preventDefault, currentTarget });
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(first.focus).toHaveBeenCalledOnce();
+    expect(dialog?.type).toBe("dialog");
+    expect(dialog?.props["aria-modal"]).toBe("true");
   });
 
   it("shows the requested conflict message and refresh button after re-reading status", async () => {
@@ -279,7 +295,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
     const decisionState = state.setters[3].mock.calls.at(-1)?.[0];
     const markup = renderToStaticMarkup(<ActionDetails action={action} onDecide={vi.fn()} decisionState={decisionState} submitting={false} onRefresh={vi.fn()} />);
-    expect(markup).toContain("Already decided by someone else");
+    expect(markup).toContain("action is no longer pending");
     expect(markup).toContain("Refresh queue");
   });
 
@@ -290,7 +306,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: unknown. Refresh the queue before trying again.",
+      message: "A network error interrupted the decision request. Current status: unknown. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -306,7 +322,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: pending. Refresh the queue before trying again.",
+      message: "The server could not confirm the decision (HTTP 503). Current status: pending. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -320,7 +336,7 @@ describe("decision queue", () => {
     await queueProps().onDecide(action.id, "denied");
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: approved. Refresh the queue before trying again.",
+      message: "The server could not confirm the decision (HTTP 500). Current status: approved. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -333,8 +349,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision request failed (400). Refresh the queue and try again.",
-      refreshAvailable: true,
+      message: "The decision request was rejected (HTTP 400). Check the reviewer name and reason, then try again.",
       locked: false,
     });
   });
@@ -426,7 +441,7 @@ describe("decision queue", () => {
       const result = state.setters[3].mock.calls.at(-1)?.[0];
       expect(result?.actionId).toBe(action.id);
       if (failure === "conflict") {
-        expect(result?.message).toContain("Already decided by someone else");
+        expect(result?.message).toContain("action is no longer pending");
       } else {
         expect(result?.message).toContain("denied");
       }

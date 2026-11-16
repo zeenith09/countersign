@@ -71,7 +71,7 @@ export function ActionDetails({ action, onDecide, decisionState, submitting, onR
 }) {
 	const state = decisionState?.actionId === action.id ? decisionState : null;
 	return (
-		<section aria-labelledby={`detail-${action.id}`} className="mt-4">
+		<section aria-labelledby={`detail-${action.id}`} aria-busy={submitting} className="mt-4">
 			<h4 id={`detail-${action.id}`}>Action details</h4>
 			<p className="mt-2 wrap-break-words"><SummaryText parts={action.summaryParts} /></p>
 			<div className="mt-2">
@@ -101,14 +101,6 @@ export function ActionDetails({ action, onDecide, decisionState, submitting, onR
 					className="border px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
 				>
 					Deny
-				</button>
-				<button
-					type="button"
-					disabled
-					title="Edit-then-approve is not available yet."
-					className="border px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
-				>
-					Edit
 				</button>
 			</div>
 			{state && (

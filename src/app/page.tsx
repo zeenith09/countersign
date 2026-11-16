@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { getPrisma } from "../lib/prisma";
 import { policy } from "../lib/policy/policy";
@@ -30,7 +31,12 @@ export default async function Home() {
           Pending actions
         </h2>
         {actions.length === 0 ? (
-          <p className="mt-4">No pending actions found.</p>
+          <p className="mt-4">
+            No actions are awaiting approval. Refresh the queue to check for new submissions.{" "}
+            <Link href="/" className="underline decoration-2 underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">
+              Refresh queue
+            </Link>
+          </p>
         ) : (
           <DecisionQueue
             actions={actions.map((action) => ({
