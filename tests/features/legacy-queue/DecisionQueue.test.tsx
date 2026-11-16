@@ -4,9 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   values: ["Reviewer", "Reason", false, null, null] as unknown[],
-  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  setters: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
   index: 0,
-  inFlight: { current: false },
+  refs: [
+    { current: false as boolean | HTMLElement | null },
+    { current: null as HTMLElement | null },
+    { current: null as HTMLElement | null },
+    { current: null as HTMLElement | null },
+  ],
+  refIndex: 0,
   refresh: vi.fn(),
 }));
 
@@ -18,35 +24,41 @@ vi.mock("react", async (importOriginal) => {
       const index = state.index++;
       return [state.values[index], state.setters[index]];
     },
-    useRef: () => state.inFlight,
+    useRef: () => state.refs[state.refIndex++],
   };
 });
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: state.refresh }) }));
 
-import { DecisionQueue } from "../src/app/decision-queue";
-import { ActionDetails, QueueList, type QueueAction } from "../src/app/queue-list";
+import { DecisionQueue } from "../../../src/features/legacy-queue/DecisionQueue";
+import { ActionDetails, QueueList, type QueueAction } from "../../../src/features/legacy-queue/QueueList";
 
 const action: QueueAction = {
   id: "c076fb00-26d9-4dfd-9f31-000000000001",
   tool: "issue_refund",
   parameters: { amount: 25 },
   summary: "Refund request",
+  summaryParts: [{ type: "text", value: "Refund request" }],
   agentReasoning: "Customer requested a refund",
   createdAt: "2026-01-01T10:00:00.000Z",
   age: "2 hours ago",
-  policyRuleMatched: "refund-over-500",
+  policyRuleMatched: "other-refunds-allowed",
+  policyRuleDescription: "Refunds not matched by the over-$500 rule are allowed.",
 };
 
-function queueProps() {
+function queueProps(actions: QueueAction[] = [action]) {
   state.index = 0;
-  const tree = DecisionQueue({ actions: [action] });
+  state.refIndex = 0;
+  const tree = DecisionQueue({ actions });
   const children: ReactNode[] = tree.props.children;
   const queue = children.find((child) => isValidElement(child) && child.type === QueueList);
   if (!queue || !isValidElement(queue)) throw new Error("Queue not rendered");
   return (queue as ReactElement<React.ComponentProps<typeof QueueList>>).props;
 }
 
-function findButton(node: ReactNode, text: string): ReactElement<{ onClick?: () => void; disabled?: boolean }> | undefined {
+function findButton(node: ReactNode, text: string): ReactElement<{
+  onClick?: (event?: { currentTarget: HTMLElement }) => void;
+  disabled?: boolean;
+}> | undefined {
   if (Array.isArray(node)) {
     for (const child of node) {
       const match = findButton(child, text);
@@ -54,7 +66,11 @@ function findButton(node: ReactNode, text: string): ReactElement<{ onClick?: () 
     }
     return undefined;
   }
-  if (!isValidElement<{ children?: ReactNode; onClick?: () => void; disabled?: boolean }>(node)) return undefined;
+  if (!isValidElement<{
+    children?: ReactNode;
+    onClick?: (event?: { currentTarget: HTMLElement }) => void;
+    disabled?: boolean;
+  }>(node)) return undefined;
   if (node.type === "button" && node.props.children === text) return node;
   return findButton(node.props.children, text);
 }
@@ -72,11 +88,38 @@ function findInputs(node: ReactNode): ReactElement<{
   return [...inputs, ...findInputs(node.props.children)];
 }
 
+function findDialog(node: ReactNode): ReactElement<{
+  children?: ReactNode;
+  "aria-modal"?: boolean;
+  onCancel?: (event: { preventDefault: () => void }) => void;
+  ref?: (node: HTMLDialogElement | null) => void;
+}> | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const match = findDialog(child);
+      if (match) return match;
+    }
+    return undefined;
+  }
+  if (!isValidElement<{
+    children?: ReactNode;
+    "aria-modal"?: boolean;
+    onCancel?: (event: { preventDefault: () => void }) => void;
+    ref?: (node: HTMLDialogElement | null) => void;
+  }>(node)) return undefined;
+  if (node.type === "dialog") return node;
+  return findDialog(node.props.children);
+}
+
 describe("decision queue", () => {
   beforeEach(() => {
-    state.values = ["Reviewer", "Reason", false, null, null];
+    state.values = ["Reviewer", "Reason", false, null, null, null, ""];
     state.index = 0;
-    state.inFlight.current = false;
+    state.refIndex = 0;
+    state.refs[0].current = false;
+    state.refs[1].current = null;
+    state.refs[2].current = null;
+    state.refs[3].current = null;
     state.refresh.mockReset();
     state.setters.forEach((setter) => setter.mockReset());
   });
@@ -87,11 +130,13 @@ describe("decision queue", () => {
     const onDecide = vi.fn();
     const onRefresh = vi.fn();
     const details = ActionDetails({ action, onDecide, decisionState: null, submitting: false, onRefresh });
-    findButton(details, "Approve")?.props.onClick?.();
-    findButton(details, "Deny")?.props.onClick?.();
-    expect(onDecide).toHaveBeenNthCalledWith(1, action.id, "approved");
-    expect(onDecide).toHaveBeenNthCalledWith(2, action.id, "denied");
-    expect(findButton(details, "Edit")?.props.disabled).toBe(true);
+    const approveTrigger = { focus: vi.fn() } as unknown as HTMLElement;
+    const denyTrigger = { focus: vi.fn() } as unknown as HTMLElement;
+    findButton(details, "Approve")?.props.onClick?.({ currentTarget: approveTrigger });
+    findButton(details, "Deny")?.props.onClick?.({ currentTarget: denyTrigger });
+    expect(onDecide).toHaveBeenNthCalledWith(1, action.id, "approved", approveTrigger);
+    expect(onDecide).toHaveBeenNthCalledWith(2, action.id, "denied", denyTrigger);
+    expect(findButton(details, "Edit")).toBeUndefined();
 
     const conflict = ActionDetails({
       action, onDecide, submitting: false, onRefresh,
@@ -140,15 +185,105 @@ describe("decision queue", () => {
     expect(state.refresh).toHaveBeenCalledOnce();
   });
 
-  it("requires a non-blank reviewer and reason", async () => {
+  it("announces a pending decision and focuses the persistent status after commit", async () => {
+    const focus = vi.fn();
+    state.refs[2].current = { focus } as unknown as HTMLElement;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ status: "approved" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await queueProps().onDecide(action.id, "approved");
+    expect(state.setters[6]).toHaveBeenNthCalledWith(1, "Submitting approval decision.");
+    expect(state.setters[6]).toHaveBeenLastCalledWith("Decision committed. Current status: approved.");
+    expect(focus).toHaveBeenCalledOnce();
+  });
+
+  it("requires a non-blank reason and moves focus to the reason field", async () => {
     state.values[1] = "   ";
     const fetchMock = vi.fn();
+    const focus = vi.fn();
+    const getElementById = vi.fn(() => ({ focus }));
+    vi.stubGlobal("document", { getElementById });
     vi.stubGlobal("fetch", fetchMock);
     await queueProps().onDecide(action.id, "approved");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(state.setters[3]).toHaveBeenCalledWith({
-      actionId: action.id, message: "Enter a reviewer and reason.", locked: false,
-    });
+    expect(focus).toHaveBeenCalledOnce();
+    expect(getElementById).toHaveBeenCalledWith("decision-reason");
+    expect(state.setters[4]).toHaveBeenCalledWith({ field: "reason", message: "Enter a reason." });
+
+    state.values[4] = { field: "reason", message: "Enter a reason." };
+    state.index = 0;
+    const markup = renderToStaticMarkup(DecisionQueue({ actions: [action] }));
+    expect(markup).toContain('aria-invalid="true"');
+    expect(markup).toContain('role="alert">Enter a reason.</span>');
+  });
+
+  it("requires a non-blank reviewer", async () => {
+    state.values[0] = "   ";
+    const focus = vi.fn();
+    vi.stubGlobal("document", { getElementById: vi.fn(() => ({ focus })) });
+    await queueProps().onDecide(action.id, "approved");
+    expect(focus).toHaveBeenCalledOnce();
+    expect(state.setters[4]).toHaveBeenCalledWith({ field: "reviewer", message: "Enter a reviewer name." });
+  });
+
+  it("requires confirmation to deny an action matched by refund-over-500", () => {
+    const highRiskAction = { ...action, policyRuleMatched: "refund-over-500" };
+    const trigger = { focus: vi.fn() } as unknown as HTMLElement;
+    const onDecide = queueProps([highRiskAction]).onDecide;
+    onDecide(highRiskAction.id, "denied", trigger);
+    expect(state.setters[5]).toHaveBeenCalledWith({ actionId: highRiskAction.id, outcome: "denied" });
+    expect(trigger.focus).not.toHaveBeenCalled();
+  });
+
+  it("requires confirmation to approve a delete action", () => {
+    const deleteAction = { ...action, tool: "delete_record" };
+    const trigger = { focus: vi.fn() } as unknown as HTMLElement;
+    queueProps([deleteAction]).onDecide(deleteAction.id, "approved", trigger);
+    expect(state.setters[5]).toHaveBeenCalledWith({ actionId: deleteAction.id, outcome: "approved" });
+  });
+
+  it("uses a native modal dialog and returns focus to its trigger on Escape", () => {
+    const highRiskAction = { ...action, policyRuleMatched: "refund-over-500" };
+    const trigger = { focus: vi.fn() } as unknown as HTMLElement;
+    queueProps([highRiskAction]).onDecide(highRiskAction.id, "denied", trigger);
+    state.values[5] = { actionId: highRiskAction.id, outcome: "denied" };
+    state.index = 0;
+    state.refIndex = 0;
+    const tree = DecisionQueue({ actions: [highRiskAction] });
+    const markup = renderToStaticMarkup(tree);
+    expect(markup).toContain("<dialog");
+    expect(markup).toContain('aria-modal="true"');
+    expect(markup).toContain("This action matched the refund-over-500 rule.");
+
+    const dialog = findDialog(tree);
+    if (!dialog) throw new Error("Confirmation dialog not rendered");
+    const firstButton = { focus: vi.fn() };
+    const nativeDialog = {
+      open: false,
+      showModal: vi.fn(),
+      close: vi.fn(),
+      querySelector: vi.fn(() => firstButton),
+      focus: vi.fn(),
+    } as unknown as HTMLDialogElement;
+    dialog.props.ref?.(nativeDialog);
+    expect(nativeDialog.showModal).toHaveBeenCalledOnce();
+    expect(firstButton.focus).toHaveBeenCalledOnce();
+    const preventDefault = vi.fn();
+    dialog.props.onCancel?.({ preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(nativeDialog.close).toHaveBeenCalledOnce();
+    expect(trigger.focus).toHaveBeenCalledOnce();
+    expect(state.setters[5]).toHaveBeenLastCalledWith(null);
+  });
+
+  it("renders a native dialog with modal accessibility state", () => {
+    const highRiskAction = { ...action, policyRuleMatched: "refund-over-500" };
+    state.values[5] = { actionId: highRiskAction.id, outcome: "denied" };
+    const tree = DecisionQueue({ actions: [highRiskAction] });
+    const dialog = findDialog(tree);
+    expect(dialog?.type).toBe("dialog");
+    expect(dialog?.props["aria-modal"]).toBe("true");
   });
 
   it("shows the requested conflict message and refresh button after re-reading status", async () => {
@@ -160,7 +295,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
     const decisionState = state.setters[3].mock.calls.at(-1)?.[0];
     const markup = renderToStaticMarkup(<ActionDetails action={action} onDecide={vi.fn()} decisionState={decisionState} submitting={false} onRefresh={vi.fn()} />);
-    expect(markup).toContain("Already decided by someone else");
+    expect(markup).toContain("action is no longer pending");
     expect(markup).toContain("Refresh queue");
   });
 
@@ -171,7 +306,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: unknown. Refresh the queue before trying again.",
+      message: "A network error interrupted the decision request. Current status: unknown. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -187,7 +322,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(`/api/actions/${action.id}`, { cache: "no-store" });
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: pending. Refresh the queue before trying again.",
+      message: "The server could not confirm the decision (HTTP 503). Current status: pending. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -201,7 +336,7 @@ describe("decision queue", () => {
     await queueProps().onDecide(action.id, "denied");
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision could not be confirmed. Current status: approved. Refresh the queue before trying again.",
+      message: "The server could not confirm the decision (HTTP 500). Current status: approved. Refresh the queue before trying again.",
       refreshAvailable: true,
       locked: true,
     });
@@ -214,8 +349,7 @@ describe("decision queue", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(state.setters[3]).toHaveBeenLastCalledWith({
       actionId: action.id,
-      message: "Decision request failed (400). Refresh the queue and try again.",
-      refreshAvailable: true,
+      message: "The decision request was rejected (HTTP 400). Check the reviewer name and reason, then try again.",
       locked: false,
     });
   });
@@ -307,7 +441,7 @@ describe("decision queue", () => {
       const result = state.setters[3].mock.calls.at(-1)?.[0];
       expect(result?.actionId).toBe(action.id);
       if (failure === "conflict") {
-        expect(result?.message).toContain("Already decided by someone else");
+        expect(result?.message).toContain("action is no longer pending");
       } else {
         expect(result?.message).toContain("denied");
       }

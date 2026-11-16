@@ -9,6 +9,7 @@ Thumbs.db
 # Node / build
 node_modules/
 .next/
+.next-e2e/
 out/
 coverage/
 playwright-report/

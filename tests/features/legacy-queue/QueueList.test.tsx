@@ -16,7 +16,7 @@ vi.mock("react", async (importOriginal) => {
   };
 });
 
-import { QueueList } from "../src/app/queue-list";
+import { QueueList, type QueueAction } from "../../../src/features/legacy-queue/QueueList";
 
 type SelectButtonProps = {
   children?: ReactNode;
@@ -39,26 +39,30 @@ function findSelectButton(node: ReactNode, labelFragment: string): ReactElement<
 }
 
 describe("QueueList selection", () => {
-  const actions = [
+  const actions: QueueAction[] = [
     {
       id: "action-one",
       tool: "issue_refund",
       parameters: { amount: 25 },
       summary: "Refund request",
+      summaryParts: [{ type: "text", value: "Refund request" }],
       agentReasoning: "Customer requested a refund",
       createdAt: "2026-01-01T10:00:00.000Z",
       age: "2 hours ago",
       policyRuleMatched: "refund-over-500",
+      policyRuleDescription: "Refunds over $500 require reviewer approval.",
     },
     {
       id: "action-two",
       tool: "send_email",
       parameters: { to: "support@countersign.example" },
       summary: "Email request",
+      summaryParts: [{ type: "text", value: "Email request" }],
       agentReasoning: "Customer requested an update",
       createdAt: "2026-01-01T11:00:00.000Z",
       age: "1 hour ago",
       policyRuleMatched: null,
+      policyRuleDescription: null,
     },
   ];
   const props = { actions, onDecide: vi.fn(), decisionState: null, submitting: false, onRefresh: vi.fn() };
@@ -73,8 +77,8 @@ describe("QueueList selection", () => {
 
   it("shows each rule label and toggles details for the selected action", () => {
     const initial = renderToStaticMarkup(QueueList(props));
-    expect(initial).toContain("Matched rule: refund-over-500");
-    expect(initial).toContain("Matched rule: Not recorded");
+    expect(initial).toContain("Matched policy rule: </span>refund-over-500 — Refunds over $500 require reviewer approval.");
+    expect(initial).toContain("Matched policy rule: </span>Not recorded — No matched policy rule was recorded.");
     expect(initial.match(/Select action/g)).toHaveLength(2);
     expect(initial).not.toContain("Action details");
 
@@ -86,6 +90,8 @@ describe("QueueList selection", () => {
     expect(firstSelected).toContain(">Selected</button>");
     expect(firstSelected).toContain("Action details");
     expect(firstSelected).toContain("Refund request");
+    expect(firstSelected).toContain("Matched policy rule: </span>refund-over-500 — Refunds over $500 require reviewer approval.");
+    expect(firstSelected).toContain("Risk assessment status: </span><span>Risk not assessed</span>");
 
     const secondButton = findSelectButton(QueueList(props), "send_email");
     expect(secondButton?.props["aria-pressed"]).toBe(false);
@@ -102,5 +108,18 @@ describe("QueueList selection", () => {
     expect(deselected).not.toContain("Action details");
     expect(deselected.match(/Select action/g)).toHaveLength(2);
     expect(deselected).not.toContain('aria-pressed="true"');
+  });
+
+  it.each([
+    ["no_rule_match", "No policy rule matched; reviewer approval is required."],
+    ["unsupported_tool", "The submitted tool is not registered and is blocked."],
+  ])("shows the built-in description for %s", (ruleId, description) => {
+    const action = {
+      ...actions[0],
+      policyRuleMatched: ruleId,
+      policyRuleDescription: null,
+    };
+    const markup = renderToStaticMarkup(QueueList({ ...props, actions: [action] }));
+    expect(markup).toContain(`Matched policy rule: </span>${ruleId} — ${description}`);
   });
 });
