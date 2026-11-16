@@ -98,7 +98,7 @@ export function ActionDetailDialog({
                 {copied ? "Copied" : "Copy JSON"}
               </button>
             </div>
-            <pre className="code-block" tabIndex={0}><JsonCode value={action.parameters} /></pre>
+            <pre className="code-block"><JsonCode value={action.parameters} /></pre>
           </div>
           <div className="dialog-footer">
             <p>
@@ -269,6 +269,7 @@ export function DecisionDialog({
               Cancel
             </button>
             <button
+              type="submit"
               className={`button ${outcome === "approved" ? "approve" : "deny"}`}
               disabled={decisionState === "loading" || locked}
             >

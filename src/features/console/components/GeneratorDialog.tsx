@@ -151,6 +151,7 @@ export function GeneratorDialog({
         <div
           className="tabs"
           role="tablist"
+          tabIndex={-1}
           aria-label="Generator mode"
           onKeyDown={(event) => {
             if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -255,7 +256,11 @@ export function GeneratorDialog({
             </div>
             <div className="syntax-preview" aria-label="Syntax-highlighted JSON preview">
               <span>Syntax preview</span>
-              <pre tabIndex={0}>
+              <pre
+                role="region"
+                aria-label="Scrollable syntax preview"
+                tabIndex={0}
+              >
                 <JsonCode
                   value={(() => {
                     try {
