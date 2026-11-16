@@ -140,7 +140,7 @@ export function DecisionQueue({ actions }: { actions: QueueAction[] }) {
 
   return (
     <>
-      <div className="mt-4 flex flex-wrap gap-4">
+      <div className="console-reviewer-fields mt-4 flex flex-wrap gap-4">
         <label className="flex flex-col gap-1">
           Reviewer name
           <input

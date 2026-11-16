@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Approval queue",
-  description: "Review the seeded pending actions.",
+  title: "Countersign approval console",
+  description: "Review agent actions and inspect activity and audit records.",
+  icons: { icon: "/countersign-figma-favicon.png" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
