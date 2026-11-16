@@ -1,4 +1,4 @@
-import FigmaConsole from "./figma-console";
+import FigmaConsole from "../features/console/Console";
 import "./redesign.css";
 
 export default function Home() {

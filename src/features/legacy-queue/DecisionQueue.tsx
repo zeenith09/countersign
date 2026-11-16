@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QueueList, type DecisionOutcome, type DecisionState, type QueueAction } from "./queue-list";
+import { QueueList, type DecisionOutcome, type DecisionState, type QueueAction } from "./QueueList";
 
 async function readStatus(id: string): Promise<string | null> {
   try {

@@ -1,9 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { seedActions } from "../prisma/seed-actions";
-import { summarizeAction } from "../src/app/action-summary";
-import { ActionDetails, QueueList } from "../src/app/queue-list";
+import { seedActions } from "../../../prisma/seed-actions";
+import { summarizeAction } from "../../../src/features/actions/action-summary";
+import { ActionDetails, QueueList } from "../../../src/features/legacy-queue/QueueList";
 
 describe("action summary", () => {
   it("summarizes a refund", () => {

@@ -16,7 +16,7 @@ vi.mock("react", async (importOriginal) => {
   };
 });
 
-import { QueueList, type QueueAction } from "../src/app/queue-list";
+import { QueueList, type QueueAction } from "../../../src/features/legacy-queue/QueueList";
 
 type SelectButtonProps = {
   children?: ReactNode;

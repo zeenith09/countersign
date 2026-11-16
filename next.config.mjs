@@ -1,10 +1,13 @@
 /** @type {import('next').NextConfig} */
+import { readEnv } from './src/lib/config/env.mjs'
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  distDir: readEnv('NEXT_DIST_DIR') ?? '.next',
   turbopack: {
     root: process.cwd(),
   },
 }
 
-module.exports = nextConfig
+export default nextConfig

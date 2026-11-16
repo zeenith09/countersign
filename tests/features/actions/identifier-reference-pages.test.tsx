@@ -11,12 +11,12 @@ const { connection, findMany, notFound } = vi.hoisted(() => ({
 
 vi.mock("next/server", () => ({ connection }));
 vi.mock("next/navigation", () => ({ notFound }));
-vi.mock("../src/lib/prisma", () => ({
+vi.mock("../../../src/lib/prisma", () => ({
   getPrisma: () => ({ action: { findMany } }),
 }));
 
-import OrderPage from "../src/app/orders/[id]/page";
-import RecordPage from "../src/app/records/[id]/page";
+import OrderPage from "../../../src/app/orders/[id]/page";
+import RecordPage from "../../../src/app/records/[id]/page";
 
 describe("identifier reference pages", () => {
   afterEach(() => vi.clearAllMocks());

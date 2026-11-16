@@ -1,10 +1,10 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { seedActions } from "../prisma/seed-actions";
-import type { Prisma } from "../src/generated/prisma/client";
-import { summarizeAction, summarizeActionParts } from "../src/app/action-summary";
-import { ActionDetails } from "../src/app/queue-list";
+import { seedActions } from "../../../prisma/seed-actions";
+import type { Prisma } from "../../../src/generated/prisma/client";
+import { summarizeAction, summarizeActionParts } from "../../../src/features/actions/action-summary";
+import { ActionDetails } from "../../../src/features/legacy-queue/QueueList";
 
 function joinedSummary(tool: string, parameters: Prisma.JsonValue): string {
   return summarizeActionParts(tool, parameters)

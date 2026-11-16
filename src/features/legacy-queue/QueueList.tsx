@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { Prisma } from "../generated/prisma/client";
-import { getSummaryIdentifierHref, type SummaryPart } from "./action-summary";
-import { AssessmentStatus } from "./queue-display";
+import type { Prisma } from "../../generated/prisma/client";
+import { getSummaryIdentifierHref, type SummaryPart } from "../actions/action-summary";
+import { AssessmentStatus } from "./QueueDisplay";
 
 export type QueueAction = {
 	id: string;

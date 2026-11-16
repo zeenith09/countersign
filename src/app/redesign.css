@@ -367,7 +367,7 @@
 	.metric span {
 		display: block;
 		margin-top: 3px;
-		color: #78827c;
+		color: #58635d;
 		font-size: 9.5px;
 		white-space: nowrap;
 	}
@@ -387,7 +387,7 @@
 	}
 	.section-heading p {
 		margin-top: 4px;
-		color: #78827c;
+		color: #58635d;
 		font-size: 10.5px;
 	}
 	.sort-label {
@@ -523,11 +523,11 @@
 	}
 	.reasoning span,
 	.detail-block > span,
-	.detail-summary span,
-	.matched-rule span,
-	.code-heading span {
+	.detail-summary > div > span,
+	.matched-rule > div > span,
+	.code-heading > div > span {
 		display: block;
-		color: #8a938e;
+		color: #58635d;
 		font-size: 8.5px;
 		font-weight: 600;
 		text-transform: uppercase;
@@ -793,7 +793,7 @@
 	.detail-block small {
 		display: block;
 		margin-top: 3px;
-		color: #919a95;
+		color: #58635d;
 		font-size: 8.5px;
 	}
 	.mono {
@@ -824,7 +824,7 @@
 	}
 	.matched-rule p {
 		margin-top: 3px;
-		color: #65736b;
+		color: #58635d;
 		font-size: 9.5px;
 	}
 	.code-heading {
@@ -836,7 +836,7 @@
 	.code-heading small {
 		display: block;
 		margin-top: 3px;
-		color: #8b958f;
+		color: #58635d;
 		font-size: 8.5px;
 	}
 	.code-heading button {
@@ -887,7 +887,7 @@
 		display: flex;
 		align-items: center;
 		gap: 5px;
-		color: #7a857e;
+		color: #58635d;
 		font-size: 8.5px;
 	}
 	.dialog-footer > p svg,
@@ -971,7 +971,7 @@
 		color: var(--red);
 	}
 	.decision-hero p {
-		color: #6f7a73;
+		color: #58635d;
 		font-size: 8.5px;
 		font-weight: 650;
 		text-transform: uppercase;
@@ -985,7 +985,7 @@
 	.decision-hero span {
 		display: block;
 		margin-top: 4px;
-		color: #78847c;
+		color: #58635d;
 		font:
 			400 8.5px IBM Plex Mono,
 			monospace;
@@ -1051,7 +1051,7 @@
 		font-size: 8.5px;
 	}
 	.field-help {
-		color: #87918b;
+		color: #58635d;
 	}
 	.field-error {
 		color: #b43c45;
@@ -1126,7 +1126,7 @@
 		justify-content: center;
 		gap: 7px;
 		border-radius: 6px;
-		color: #758078;
+		color: #58635d;
 		font-size: 9.5px;
 		font-weight: 600;
 	}
@@ -1148,7 +1148,7 @@
 		font-weight: 650;
 	}
 	.generator-label small {
-		color: #909993;
+		color: #58635d;
 		font-size: 8.5px;
 	}
 	.generator-label button {
@@ -1210,14 +1210,14 @@
 	.scenario-copy small {
 		display: block;
 		margin-top: 4px;
-		color: #818b85;
+		color: #58635d;
 		font-size: 8.5px;
 	}
 	.expected {
 		padding: 4px 6px;
 		border-radius: 5px;
 		background: #f1f4f2;
-		color: #6a756e;
+		color: #58635d;
 		font-size: 8px;
 		white-space: nowrap;
 	}
@@ -1235,7 +1235,7 @@
 		display: flex;
 		flex-direction: column;
 		border-right: 1px solid #2c3630;
-		color: #56635b;
+		color: #b8c5bd;
 		font:
 			400 10px/1.65 IBM Plex Mono,
 			monospace;
@@ -1271,7 +1271,7 @@
 	.syntax-preview > span {
 		display: block;
 		margin-bottom: 6px;
-		color: #7d8881;
+		color: #58635d;
 		font-size: 7.5px;
 		font-weight: 650;
 		text-transform: uppercase;
@@ -1578,7 +1578,7 @@
 		padding: 0 16px;
 		border-bottom: 1px solid var(--soft-line);
 		background: #f8faf9;
-		color: #8a948e;
+		color: #58635d;
 		font-size: 8px;
 		font-weight: 650;
 		text-transform: uppercase;
@@ -1634,7 +1634,7 @@
 		padding: 0 16px;
 		background: #f7f9f8;
 		border-bottom: 1px solid var(--soft-line);
-		color: #8a948e;
+		color: #58635d;
 		font-size: 8px;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
@@ -3102,7 +3102,7 @@
 	}
 	.theme-coming-soon strong {
 		margin-left: auto;
-		color: #888494;
+		color: #58635d;
 		font-size: 11px;
 		font-weight: 500;
 	}
