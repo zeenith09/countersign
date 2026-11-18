@@ -81,7 +81,11 @@ export function ConsoleHeader({
               <small>Console snapshot</small>
             </div>
           </div>
-          <button className="header-generate" onClick={onOpenGenerator}>
+          <button
+            className="header-generate"
+            onClick={onOpenGenerator}
+            aria-label="New action"
+          >
             <Icon name="plus" size={16} />
             <span>New action</span>
           </button>
@@ -103,13 +107,13 @@ export function ConsoleHeader({
           </button>
         </div>
       </header>
-      {mobileNav && (
-        <button
-          className="nav-backdrop"
-          aria-label="Close navigation"
-          onClick={() => onMobileNavChange(false)}
-        />
-      )}
+      <button
+        className={`nav-backdrop ${mobileNav ? "visible" : ""}`}
+        aria-label="Close navigation"
+        aria-hidden={!mobileNav}
+        tabIndex={-1}
+        onClick={() => onMobileNavChange(false)}
+      />
     </>
   );
 }

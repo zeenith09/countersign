@@ -20,6 +20,13 @@ import {
 } from "./components/ConsolePages";
 import { ConsoleHeader } from "./components/ConsoleHeader";
 
+function prefersReducedMotion() {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>("queue");
   const [mobileNav, setMobileNav] = useState(false);
@@ -47,6 +54,7 @@ export default function App() {
   const [queueSort, setQueueSort] = useState<"oldest" | "newest">("oldest");
   const detailDialog = useRef<HTMLDialogElement>(null);
   const decisionDialog = useRef<HTMLDialogElement>(null);
+  const pageContent = useRef<HTMLDivElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const reviewerRef = useRef<HTMLInputElement>(null);
   const inFlightDecision = useRef(false);
@@ -84,6 +92,38 @@ export default function App() {
   useEffect(() => {
     if (selected && decision && !decisionDialog.current?.open) decisionDialog.current?.showModal();
   }, [selected, decision]);
+
+  useEffect(() => {
+    const revealTargets = pageContent.current?.querySelectorAll<HTMLElement>("[data-reveal]");
+    if (!revealTargets) return;
+
+    const revealImmediately = () => {
+      revealTargets.forEach((element) => element.classList.add("is-visible"));
+    };
+
+    if (prefersReducedMotion() || !("IntersectionObserver" in window)) {
+      revealImmediately();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries, currentObserver) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          currentObserver.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -24px 0px" },
+    );
+
+    revealTargets.forEach((element) => {
+      element.classList.add("reveal-on-scroll");
+      if (!element.classList.contains("is-visible")) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [activityFilter, page, queueSort, snapshot]);
 
   function openAction(action: Action) {
     setSelected(action);
@@ -168,7 +208,8 @@ export default function App() {
   function navigate(next: Page) {
     setPage(next);
     setMobileNav(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const behavior = prefersReducedMotion() ? "auto" : "smooth";
+    window.scrollTo({ top: 0, behavior });
   }
 
   function showActivityStatus(status: Status) {
@@ -216,7 +257,7 @@ export default function App() {
       />
 
       <main>
-        <div className="page">
+        <div className="page page-transition" key={page} ref={pageContent}>
           <p id="console-announcement" role="status" aria-live="polite" tabIndex={-1}>{announcement}</p>
           {snapshotError && <p role="alert">{snapshotError} <button type="button" onClick={() => void loadSnapshot()}>Retry loading</button></p>}
           {!snapshot && !snapshotError && <p role="status">Loading console data. Please wait.</p>}
