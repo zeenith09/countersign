@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ConsoleHeader } from "../../../src/features/console/components/ConsoleHeader";
+import { ConsoleHeader } from "../../../src/components/header/ConsoleHeader";
 
 describe("ConsoleHeader interactions", () => {
   afterEach(cleanup);

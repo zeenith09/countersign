@@ -3,8 +3,8 @@
 import { createRef, type FormEvent } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ConsoleAction } from "../../../src/features/console/contract";
-import { ActionDetailDialog, DecisionDialog } from "../../../src/features/console/components/ActionDialogs";
+import type { ConsoleAction } from "../../../src/lib/console/contract";
+import { ActionDetailDialog, DecisionDialog } from "../../../src/components/dialogs/ActionDialogs";
 
 const action: ConsoleAction = {
   id: "action-1",

@@ -1,0 +1,785 @@
+@scope (.redesign) {
+	.queue-section {
+		margin-top: 4px;
+	}
+	.sort-label {
+		padding: 5px 8px;
+		border: 1px solid #dce2de;
+		border-radius: 6px;
+		background: white;
+		color: #68736c;
+		font-size: 0.59375rem;
+	}
+	.sort-label span {
+		color: #313c35;
+		margin-left: 5px;
+	}
+	.queue-list {
+		display: grid;
+		gap: 11px;
+	}
+	.action-card {
+		overflow: hidden;
+		display: grid;
+		grid-template-columns: 1fr 154px;
+		border: 1px solid #dbe2de;
+		border-radius: 10px;
+		background: white;
+		box-shadow: 0 1px 2px rgba(17, 36, 24, 0.025);
+		transition:
+			border-color 0.16s,
+			box-shadow 0.16s,
+			transform 0.16s;
+		cursor: pointer;
+	}
+	.action-card:hover {
+		border-color: #aebcb4;
+		box-shadow: 0 5px 16px rgba(25, 48, 34, 0.055);
+		transform: translateY(-1px);
+	}
+	.card-main {
+		padding: 18px;
+		display: grid;
+		grid-template-columns: 34px 1fr;
+		gap: 13px;
+	}
+	.tool-icon {
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		flex: 0 0 auto;
+		border: 1px solid #dbe4df;
+		border-radius: 8px;
+		background: #f6faf7;
+		color: #3e6250;
+	}
+	.tool-icon.large {
+		width: 39px;
+		height: 39px;
+		background: #edf7f1;
+		color: #20764d;
+	}
+	.tool-icon.purple {
+		background: #f2eefb;
+		border-color: #e4dcf5;
+		color: #7256a4;
+	}
+	.card-content {
+		min-width: 0;
+	}
+	.card-title-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 15px;
+	}
+	.tool-name {
+		color: #68766e;
+		font:
+			500 0.59375rem IBM Plex Mono,
+			monospace;
+		letter-spacing: 0.01em;
+	}
+	.card-title-row h3 {
+		margin-top: 3px;
+		color: #19241e;
+		font-size: 1rem;
+		font-weight: 650;
+		letter-spacing: -0.025em;
+	}
+	.summary {
+		margin-top: 9px;
+		color: #4e5a53;
+		font-size: 0.71875rem;
+	}
+	.reasoning {
+		margin-top: 12px;
+		padding-left: 10px;
+		border-left: 2px solid #dfe8e3;
+	}
+	.reasoning p {
+		margin-top: 4px;
+		color: #58635d;
+		font-size: 0.65625rem;
+		line-height: 1.45;
+	}
+	.card-meta {
+		margin-top: 13px;
+		display: flex;
+		align-items: center;
+		gap: 15px;
+		color: #7b857f;
+		font-size: 0.59375rem;
+	}
+	.card-meta span {
+		display: flex;
+		align-items: center;
+	}
+	.card-meta span:not(:first-child)::before {
+		content: "";
+		width: 2px;
+		height: 2px;
+		margin-right: 15px;
+		border-radius: 50%;
+		background: #a7b0ab;
+	}
+	.card-meta i {
+		width: 5px;
+		height: 5px;
+		margin-right: 6px;
+		border-radius: 50%;
+		background: #dfa65e;
+	}
+	.card-meta .id-text {
+		font-family:
+			IBM Plex Mono,
+			monospace;
+		color: #8c9690;
+	}
+	.policy-row {
+		margin-top: 13px;
+		padding: 9px 10px;
+		display: flex;
+		align-items: flex-start;
+		gap: 9px;
+		border-radius: 7px;
+		background: #f7f9f8;
+	}
+	.policy-row svg {
+		margin-top: 2px;
+		color: #769184;
+	}
+	.policy-row span {
+		color: #8b948f;
+		font-size: 0.5rem;
+	}
+	.policy-row strong {
+		margin-left: 6px;
+		color: #4f5d55;
+		font:
+			500 0.5625rem IBM Plex Mono,
+			monospace;
+	}
+	.policy-row p {
+		margin-top: 3px;
+		color: #514d60;
+		font-size: 0.59375rem;
+	}
+	.card-action {
+		padding: 16px;
+		display: flex;
+		align-items: center;
+		border-left: 1px solid var(--soft-line);
+		background: #fbfcfb;
+	}
+	.review-button {
+		width: 100%;
+		height: 34px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 7px;
+		border: 1px solid #d7dfda;
+		border-radius: 7px;
+		background: white;
+		color: #29352e;
+		font-size: 0.625rem;
+		font-weight: 600;
+		transition: 0.15s;
+	}
+	.review-button:hover {
+		border-color: #a6b5ac;
+		color: #0f6c40;
+	}
+	.policy-receipt {
+		margin-top: 24px;
+		padding: 18px;
+		display: flex;
+		align-items: center;
+		gap: 13px;
+		border: 1px solid #d8e5dd;
+		border-radius: 10px;
+		background: #f2f8f4;
+	}
+	.receipt-icon {
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: #dfeee5;
+		color: #2c714e;
+	}
+	.policy-receipt h2 {
+		font-size: 0.71875rem;
+		font-weight: 650;
+	}
+	.policy-receipt-description {
+		margin-top: 3px;
+		color: #4b5850;
+		font-size: 0.59375rem;
+	}
+	.policy-receipt button {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: #276a49;
+		font-size: 0.625rem;
+		font-weight: 600;
+	}
+	.empty {
+		padding: 60px 20px;
+		text-align: center;
+		border: 1px dashed #ccd7d0;
+		border-radius: 10px;
+		background: white;
+	}
+	.empty-icon {
+		width: 40px;
+		height: 40px;
+		margin: auto;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: var(--green-soft);
+		color: var(--green);
+	}
+	.empty h3 {
+		margin-top: 14px;
+		font-size: 0.875rem;
+	}
+	.empty p {
+		margin-top: 5px;
+		color: var(--muted);
+		font-size: 0.6875rem;
+	}
+	@media (max-width: 650px) {
+		.action-card {
+			grid-template-columns: 1fr;
+		}
+		.card-main {
+			padding: 15px;
+			grid-template-columns: 29px 1fr;
+			gap: 10px;
+		}
+		.tool-icon {
+			width: 29px;
+			height: 29px;
+		}
+		.card-action {
+			padding: 0 15px 15px;
+			border: 0;
+			background: white;
+		}
+		.card-meta {
+			flex-wrap: wrap;
+			row-gap: 5px;
+		}
+		.card-meta .id-text {
+			width: 100%;
+		}
+		.card-meta .id-text::before {
+			display: none;
+		}
+		.reasoning {
+			margin-top: 10px;
+		}
+		.policy-receipt {
+			align-items: flex-start;
+			flex-wrap: wrap;
+		}
+		.policy-receipt button {
+			margin-left: 47px;
+		}
+		.card-title-row {
+			gap: 8px;
+		}
+	}
+	.metric-button:focus-visible,
+	.sort-label:focus-visible {
+		outline: 2px solid #3830a4;
+		outline-offset: 3px;
+	}
+	.queue-section {
+		position: relative;
+	}
+	.queue-section::before {
+		position: absolute;
+		left: -24px;
+		top: 170px;
+		color: #a7a0a2;
+		font-family: "IBM Plex Mono", monospace;
+		font-size: 0.4375rem;
+		letter-spacing: 0.15em;
+		writing-mode: vertical-rl;
+		transform: rotate(180deg);
+	}
+	.sort-label {
+		border: 0;
+		border-radius: 0;
+		background: #ffda55;
+		color: #423e49;
+		font-family: "IBM Plex Mono", monospace;
+		cursor: pointer;
+		transition:
+			background-color 0.15s,
+			transform 0.15s;
+	}
+	.sort-label:hover {
+		background: #f5ce39;
+		transform: translateY(-1px);
+	}
+	.queue-list {
+		gap: 16px;
+	}
+	.action-card {
+		position: relative;
+		grid-template-columns: 1fr 178px;
+		overflow: visible;
+		border: 1px solid #cbc5ba;
+		border-radius: 2px;
+		background: #fffdf8;
+		box-shadow: 6px 6px 0 rgba(34, 30, 110, 0.09);
+	}
+	.action-card::before {
+		content: "";
+		position: absolute;
+		width: 4px;
+		inset: -1px auto -1px -1px;
+		background: #ff806f;
+	}
+	.action-card:nth-child(2n)::before {
+		background: #5a50e7;
+	}
+	.action-card:hover {
+		border-color: #635db0;
+		box-shadow: 8px 8px 0 rgba(34, 30, 110, 0.13);
+		transform: translate(-2px, -2px);
+	}
+	.card-main {
+		padding: 22px 24px;
+		grid-template-columns: 42px 1fr;
+		gap: 16px;
+	}
+	.tool-icon {
+		width: 42px;
+		height: 42px;
+		border-color: #d1cbe6;
+		border-radius: 50%;
+		background: #efedff;
+		color: #3a33a5;
+	}
+	.card-title-row h3 {
+		margin-top: 5px;
+		color: #1e1d44;
+		font-size: 1.25rem;
+		letter-spacing: -0.045em;
+	}
+	.tool-name,
+	.mono,
+	.policy-row strong,
+	.card-meta .id-text {
+		font-family: "IBM Plex Mono", monospace;
+	}
+	.tool-name {
+		color: #5c58a1;
+		font-size: 0.5625rem;
+		text-transform: uppercase;
+	}
+	.summary {
+		color: #535260;
+		font-size: 0.75rem;
+	}
+	.reasoning {
+		max-width: 720px;
+		padding: 11px 13px;
+		border: 0;
+		background: #f5f1ea;
+	}
+	.reasoning p {
+		color: #4c4b5a;
+	}
+	.card-meta {
+		color: #7e7980;
+		font-family: "IBM Plex Mono", monospace;
+	}
+	.policy-row {
+		border-left: 2px solid #5149cf;
+		border-radius: 0;
+		background: #eeecff;
+	}
+	.policy-row svg {
+		color: #4c45bd;
+	}
+	.policy-row strong {
+		color: #3e388e;
+	}
+	.card-action {
+		padding: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-left: 1px dashed #cbc5ba;
+		background: #f7f2e9;
+	}
+	.review-button {
+		width: 100%;
+		min-height: 48px;
+		flex-direction: row;
+		border: 0;
+		border-radius: 2px;
+		background: #282275;
+		color: white;
+		box-shadow: 4px 4px 0 #c9c2b5;
+	}
+	.review-button:hover {
+		color: #242067;
+		background: #ffda55;
+		box-shadow: 5px 5px 0 #c9c2b5;
+		transform: translate(-1px, -1px);
+	}
+	.policy-receipt {
+		margin-top: 32px;
+		border: 1px solid #bcb5e5;
+		border-radius: 2px;
+		background: #e8e5ff;
+	}
+	.receipt-icon {
+		background: #302a94;
+		color: white;
+	}
+	.policy-receipt h2 {
+		color: #2d286f;
+	}
+	.policy-receipt button {
+		color: #3b35a4;
+	}
+	.sort-label {
+		font-size: 0.6875rem;
+	}
+	.tool-name {
+		font-size: 0.65625rem;
+	}
+	.card-title-row h3 {
+		font-size: 1.3125rem;
+	}
+	.summary {
+		font-size: 0.875rem;
+	}
+	.reasoning p {
+		font-size: 0.78125rem;
+	}
+	.card-meta {
+		font-size: 0.6875rem;
+	}
+	.policy-row strong {
+		font-size: 0.6875rem;
+	}
+	.policy-row p {
+		font-size: 0.71875rem;
+	}
+	.review-button,
+	.policy-receipt button {
+		font-size: 0.75rem;
+	}
+	.policy-receipt h2 {
+		font-size: 0.875rem;
+	}
+	.policy-receipt p,
+	.empty p {
+		font-size: 0.75rem;
+	}
+	.empty h3 {
+		font-size: 1.0625rem;
+	}
+
+	@media (max-width: 650px) {
+		.queue-section::before {
+			display: none;
+		}
+		.action-card {
+			grid-template-columns: 1fr;
+			box-shadow: 4px 4px 0 rgba(34, 30, 110, 0.09);
+		}
+		.card-action {
+			padding: 0 16px 16px;
+			justify-content: stretch;
+			border-left: 0;
+			background: #fffdf8;
+		}
+		.review-button {
+			width: 100%;
+			min-height: 38px;
+			flex-direction: row;
+			border-radius: 2px;
+			box-shadow: none;
+			transform: none;
+		}
+		.review-button:hover {
+			box-shadow: none;
+		}
+	}
+
+	@media (max-width: 860px) {
+		.card-title-row {
+			align-items: flex-start;
+		}
+	}
+
+	@media (max-width: 650px) {
+		.section-heading .sort-label {
+			align-self: flex-start;
+		}
+		.action-card {
+			width: 100%;
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.card-main {
+			width: 100%;
+			padding: 1rem;
+			grid-template-columns: 2.25rem minmax(0, 1fr);
+			gap: 0.625rem;
+		}
+		.card-title-row {
+			flex-direction: column;
+			gap: 0.625rem;
+		}
+		.card-meta {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.375rem;
+		}
+		.card-meta span::before {
+			display: none;
+		}
+		.policy-row {
+			padding: 0.75rem;
+		}
+		.card-action {
+			width: 100%;
+			padding: 0 1rem 1rem;
+		}
+		.policy-receipt {
+			padding: 1rem;
+			gap: 0.75rem;
+		}
+		.policy-receipt button {
+			margin-left: 0;
+		}
+	}
+	.action-card.reveal-on-scroll.is-visible:hover {
+		transform: translate(-2px, -2px);
+	}
+
+}
+
+.queue-skeleton-list {
+	display: grid;
+	gap: 16px;
+}
+
+.queue-skeleton-card {
+	min-height: 184px;
+	padding: 22px;
+	display: grid;
+	grid-template-columns: 42px minmax(0, 1fr);
+	align-content: start;
+	gap: 18px;
+	border: 1px solid #cbc5ba;
+	border-radius: 2px;
+	background: #fffdf8;
+	box-shadow: 6px 6px 0 rgba(34, 30, 110, 0.09);
+}
+
+.queue-skeleton-icon,
+.queue-skeleton-content > span,
+.queue-skeleton-meta span {
+	display: block;
+	border-radius: 4px;
+	background: linear-gradient(100deg, #e8e4dc 25%, #f5f2ec 45%, #e8e4dc 65%);
+	background-size: 220% 100%;
+	animation: queue-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.queue-skeleton-icon {
+	width: 42px;
+	height: 42px;
+}
+
+.queue-skeleton-content {
+	display: grid;
+	justify-items: start;
+	gap: 12px;
+}
+
+.queue-skeleton-tool {
+	width: 22%;
+	height: 14px;
+}
+
+.queue-skeleton-title {
+	width: min(44%, 260px);
+	height: 24px;
+}
+
+.queue-skeleton-summary {
+	width: min(70%, 520px);
+	height: 16px;
+}
+
+.queue-skeleton-meta {
+	width: min(72%, 450px);
+	margin-top: 10px;
+	display: flex;
+	gap: 20px;
+}
+
+.queue-skeleton-meta span {
+	width: 96px;
+	height: 14px;
+}
+
+@media (max-width: 650px) {
+
+	.queue-skeleton-card {
+		min-height: 164px;
+		padding: 16px;
+		grid-template-columns: 34px minmax(0, 1fr);
+		gap: 14px;
+	}
+
+	.queue-skeleton-icon {
+		width: 34px;
+		height: 34px;
+	}
+
+	.queue-skeleton-meta {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.queue-skeleton-meta span {
+		width: 72px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.queue-skeleton-icon,
+	.queue-skeleton-content > span,
+	.queue-skeleton-meta span {
+		animation: none;
+		background-position: 50% 0;
+	}
+}
+
+.action-card .tool-name {
+	font-size: 0.875rem;
+}
+
+.action-card .card-title-row h3 {
+	font-size: 1.5rem;
+}
+
+.action-card .badge {
+	font-size: 0.8125rem;
+	padding: 6px 9px;
+}
+
+.action-card .summary {
+	font-size: 1.0625rem;
+	line-height: 1.55;
+}
+
+.action-card .reasoning span {
+	font-size: 0.75rem;
+}
+
+.action-card .reasoning p {
+	font-size: 0.9375rem;
+	line-height: 1.55;
+}
+
+.action-card .card-meta {
+	font-size: 0.8125rem;
+}
+
+.action-card .policy-row span {
+	font-size: 0.75rem;
+}
+
+.action-card .policy-row strong {
+	font-size: 0.875rem;
+}
+
+.action-card .policy-row p {
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+
+.action-card .review-button {
+	min-height: 54px;
+	font-size: 1rem;
+}
+
+@media (max-width: 650px) {
+	.action-card .card-title-row h3 {
+		font-size: 1.25rem;
+	}
+
+	.action-card .review-button {
+		min-height: 50px;
+	}
+}
+
+.page .queue-section .section-heading p {
+	font-size: 1rem;
+}
+
+.action-card .tool-name {
+	font-size: 0.875rem;
+}
+
+.action-card .card-title-row h3 {
+	font-size: 1.25rem;
+}
+
+.action-card .badge {
+	font-size: 0.75rem;
+}
+
+.action-card .summary {
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+.action-card .reasoning span,
+.action-card .policy-row span {
+	font-size: 0.875rem;
+}
+
+.action-card .reasoning p,
+.action-card .policy-row p {
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+.action-card .card-meta {
+	font-size: 0.75rem;
+}
+
+.action-card .policy-row strong {
+	font-size: 0.8125rem;
+}
+
+.action-card .review-button {
+	min-height: 48px;
+	font-size: 0.9375rem;
+}
+
+@media (max-width: 650px) {
+	.action-card .card-title-row h3 {
+		font-size: 1.125rem;
+	}
+}

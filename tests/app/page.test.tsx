@@ -2,9 +2,9 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import Home from "../../src/app/page";
+import Home from "../../src/app/(console)/page";
 
-vi.mock("../../src/features/console/Console", () => ({
+vi.mock("../../src/components/overview/page", () => ({
   default: () => <main>Console page</main>,
 }));
 

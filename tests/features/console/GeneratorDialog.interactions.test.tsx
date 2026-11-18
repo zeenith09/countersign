@@ -2,11 +2,11 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { postActionProposal } from "../../../src/features/console/api-client";
-import { GeneratorDialog } from "../../../src/features/console/components/GeneratorDialog";
+import { postActionProposal } from "../../../src/lib/console/api-client";
+import { GeneratorDialog } from "../../../src/components/dialogs/GeneratorDialog";
 import { mockDialogMethods } from "./dom-test-helpers";
 
-vi.mock("../../../src/features/console/api-client", () => ({
+vi.mock("../../../src/lib/console/api-client", () => ({
   fetchConsoleSnapshot: vi.fn(),
   fetchActionStatus: vi.fn(),
   postActionDecision: vi.fn(),

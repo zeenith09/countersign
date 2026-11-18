@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { Badge, Icon, JsonCode, Metric, NavItem, profileTextColor, statusLabel } from "../../../src/features/console/components/ConsoleElements";
+import { Badge, Icon, JsonCode, Metric, NavItem, profileTextColor, statusLabel } from "../../../src/components/ui/ConsoleElements";
 
 describe("console elements", () => {
   it("chooses readable profile text colors for light and dark backgrounds", () => {

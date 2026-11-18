@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seedActions } from "../../../prisma/seed-actions";
-import { formatAge } from "../../../src/features/actions/format-age";
-import { AssessmentStatus } from "../../../src/features/legacy-queue/QueueDisplay";
-import { getConsoleCounts } from "../../../src/features/console/view-model";
-import { QueuePage } from "../../../src/features/console/components/ConsolePages";
-import { consoleSnapshotSchema } from "../../../src/features/console/contract";
+import { formatAge } from "../../../src/lib/actions/format-age";
+import { AssessmentStatus } from "../../../src/components/legacy-queue/QueueDisplay";
+import { getConsoleCounts } from "../../../src/lib/console/view-model";
+import { QueuePage } from "../../../src/components/approval/QueueContent";
+import { consoleSnapshotSchema } from "../../../src/lib/console/contract";
 import { policy } from "../../../src/lib/policy/policy";
 
 const { actionFindMany, actionGroupBy, auditFindMany, getPrisma } = vi.hoisted(() => ({

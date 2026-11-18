@@ -1,12 +1,12 @@
 import { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { ConsoleAction } from "../../../src/features/console/contract";
-import { ConsoleHeader } from "../../../src/features/console/components/ConsoleHeader";
-import { ActionDetailDialog, DecisionDialog } from "../../../src/features/console/components/ActionDialogs";
-import { GeneratorDialog } from "../../../src/features/console/components/GeneratorDialog";
-import { ReviewerProfileDialog } from "../../../src/features/console/components/ReviewerProfileDialog";
-import { ConsoleActivity } from "../../../src/features/console/legacy/ConsoleActivity";
+import type { ConsoleAction } from "../../../src/lib/console/contract";
+import { ConsoleHeader } from "../../../src/components/header/ConsoleHeader";
+import { ActionDetailDialog, DecisionDialog } from "../../../src/components/dialogs/ActionDialogs";
+import { GeneratorDialog } from "../../../src/components/dialogs/GeneratorDialog";
+import { ReviewerProfileDialog } from "../../../src/components/dialogs/ReviewerProfileDialog";
+import { ConsoleActivity } from "../../../src/components/history/ConsoleActivity";
 
 const action: ConsoleAction = {
   id: "action-1",

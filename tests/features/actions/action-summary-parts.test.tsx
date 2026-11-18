@@ -7,8 +7,8 @@ import {
   getSummaryIdentifierHref,
   summarizeAction,
   summarizeActionParts,
-} from "../../../src/features/actions/action-summary";
-import { ActionDetails } from "../../../src/features/legacy-queue/QueueList";
+} from "../../../src/lib/actions/action-summary";
+import { ActionDetails } from "../../../src/components/legacy-queue/QueueList";
 
 function joinedSummary(tool: string, parameters: Prisma.JsonValue): string {
   return summarizeActionParts(tool, parameters)

@@ -1,5 +1,5 @@
 import { getPrisma } from "../../../lib/prisma";
-import { getConsoleReadModel } from "../../../features/console/server/read-model";
+import { getConsoleReadModel } from "../../../lib/console/read-model";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

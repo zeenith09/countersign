@@ -5,12 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   ConsoleAction,
   ConsoleActivityItem,
-} from "../../../src/features/console/contract";
+} from "../../../src/lib/console/contract";
 import {
   ActivityPage,
-  OverviewPage,
-  QueuePage,
-} from "../../../src/features/console/components/ConsolePages";
+} from "../../../src/components/history/HistoryContent";
+import { OverviewPage } from "../../../src/components/overview/OverviewContent";
+import { QueuePage } from "../../../src/components/approval/QueueContent";
 
 const action: ConsoleAction = {
   id: "action-1",

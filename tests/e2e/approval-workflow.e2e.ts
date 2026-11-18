@@ -48,7 +48,7 @@ async function openDecision(
 
 test("approval waits for the server response, reads stored status, and focuses the announcement", async ({ page, request }) => {
   const actionId = await submitPendingAction(request);
-  await page.goto("/");
+  await page.goto("/approval");
   const decision = await openDecision(page, actionId, "Approve");
   const reviewer = decision.getByLabel("Reviewer name");
   const reason = decision.locator("textarea");
@@ -97,7 +97,7 @@ test("approval waits for the server response, reads stored status, and focuses t
 
 test("denial requires a reason and re-reads the committed denied status", async ({ page, request }) => {
   const actionId = await submitPendingAction(request);
-  await page.goto("/");
+  await page.goto("/approval");
   const decision = await openDecision(page, actionId, "Deny");
   const reviewer = decision.getByLabel("Reviewer name");
   const reason = decision.locator("textarea");
@@ -117,7 +117,7 @@ test("denial requires a reason and re-reads the committed denied status", async 
 
 test("a stale queue item reports the current status and offers a refresh", async ({ page, request }) => {
   const actionId = await submitPendingAction(request);
-  await page.goto("/");
+  await page.goto("/approval");
   const decision = await openDecision(page, actionId, "Approve");
   const externalDecision = await request.post(`/api/actions/${actionId}/decision`, {
     data: { reviewer: "Second Reviewer", outcome: "denied", reason: "Reviewed in another session." },
@@ -140,7 +140,7 @@ test("a stale queue item reports the current status and offers a refresh", async
 
 test("a committed decision with a lost response triggers a status re-read, not a success claim", async ({ page, request }) => {
   const actionId = await submitPendingAction(request);
-  await page.goto("/");
+  await page.goto("/approval");
   const decision = await openDecision(page, actionId, "Approve");
   await decision.getByLabel("Reviewer name").fill("E2E Reviewer");
   await decision.locator("textarea").fill("The action is appropriate to proceed.");

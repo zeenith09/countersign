@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { ConsoleAction, ConsoleActivityItem, ConsoleAuditEntry } from "../../../src/features/console/contract";
+import type { ConsoleAction, ConsoleActivityItem, ConsoleAuditEntry } from "../../../src/lib/console/contract";
 import {
   ActivityPage,
-  AuditPage,
-  OverviewPage,
-  QueuePage,
-} from "../../../src/features/console/components/ConsolePages";
+} from "../../../src/components/history/HistoryContent";
+import { AuditPage } from "../../../src/components/log/AuditContent";
+import { OverviewPage } from "../../../src/components/overview/OverviewContent";
+import { QueuePage } from "../../../src/components/approval/QueueContent";
 
 const pendingAction: ConsoleAction = {
   id: "action-1",

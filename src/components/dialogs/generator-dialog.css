@@ -1,0 +1,581 @@
+@scope (.redesign) {
+	.dialog-footer > p,
+	.generator-footer > p {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		color: #58635d;
+		font-size: 0.53125rem;
+	}
+	.dialog-footer > p svg,
+	.generator-footer > p svg {
+		color: #72917f;
+	}
+	.dialog-footer > div,
+	.generator-footer > div {
+		display: flex;
+		gap: 8px;
+	}
+	.generator-dialog {
+		width: min(720px, calc(100vw - 30px));
+		max-height: min(820px, calc(100vh - 30px));
+	}
+	.generator-body {
+		padding: 18px 20px;
+		overflow: auto;
+		max-height: calc(100vh - 190px);
+	}
+	.generator-intro {
+		color: #637068;
+		font-size: 0.65625rem;
+		line-height: 1.5;
+	}
+	.generator-label {
+		margin: 14px 2px 8px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.generator-label > span,
+	.generator-label > label {
+		color: #4c5851;
+		font-size: 0.59375rem;
+		font-weight: 650;
+	}
+	.generator-label small {
+		color: #58635d;
+		font-size: 0.53125rem;
+	}
+	.generator-label button {
+		color: #28724e;
+		font-size: 0.5625rem;
+		font-weight: 600;
+	}
+	.scenario-list {
+		display: grid;
+		gap: 7px;
+	}
+	.scenario {
+		position: relative;
+		min-height: 62px;
+		padding: 11px;
+		display: grid;
+		grid-template-columns: 31px 1fr auto;
+		align-items: center;
+		gap: 10px;
+		border: 1px solid #dce3df;
+		border-radius: 8px;
+		transition: 0.15s;
+		cursor: pointer;
+	}
+	.scenario:hover,
+	.scenario.selected {
+		border-color: #8eb09d;
+		background: #f8fbf9;
+	}
+	.scenario.selected {
+		box-shadow: 0 0 0 2px rgba(35, 121, 75, 0.07);
+	}
+	.scenario input {
+		position: absolute;
+		opacity: 0;
+	}
+	.scenario-icon {
+		width: 31px;
+		height: 31px;
+		display: grid;
+		place-items: center;
+		border-radius: 7px;
+		color: #a26222;
+		background: #fff1df;
+	}
+	.scenario-icon.allowed {
+		color: #21734d;
+		background: #eaf6ef;
+	}
+	.scenario-icon.blocked {
+		color: #ad4249;
+		background: #fbedef;
+	}
+	.scenario-copy strong {
+		display: block;
+		color: #334039;
+		font-size: 0.65625rem;
+	}
+	.scenario-copy small {
+		display: block;
+		margin-top: 4px;
+		color: #58635d;
+		font-size: 0.53125rem;
+	}
+	.expected {
+		padding: 4px 6px;
+		border-radius: 5px;
+		background: #f1f4f2;
+		color: #58635d;
+		font-size: 0.5rem;
+		white-space: nowrap;
+	}
+	.editor-wrap {
+		height: 250px;
+		display: grid;
+		grid-template-columns: 38px 1fr;
+		overflow: hidden;
+		border: 1px solid #2a342e;
+		border-radius: 8px;
+		background: #151d18;
+	}
+	.editor-lines {
+		padding: 13px 0;
+		display: flex;
+		flex-direction: column;
+		border-right: 1px solid #2c3630;
+		color: #b8c5bd;
+		font:
+			400 0.625rem/1.65 IBM Plex Mono,
+			monospace;
+		text-align: center;
+		user-select: none;
+	}
+	.editor-lines span {
+		height: 16.5px;
+	}
+	.editor-wrap textarea {
+		padding: 13px 14px;
+		resize: none;
+		border: 0;
+		background: transparent;
+		color: #c6d1ca;
+		caret-color: white;
+		font:
+			400 0.625rem/1.65 IBM Plex Mono,
+			monospace;
+		white-space: pre;
+		overflow: auto;
+	}
+	.editor-wrap:focus-within {
+		box-shadow: 0 0 0 3px rgba(38, 130, 79, 0.14);
+	}
+	.syntax-preview {
+		margin-top: 8px;
+		padding: 9px 11px;
+		border: 1px solid #e0e6e2;
+		border-radius: 7px;
+		background: #f8faf9;
+	}
+	.syntax-preview > span {
+		display: block;
+		margin-bottom: 6px;
+		color: #58635d;
+		font-size: 0.46875rem;
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+	.syntax-preview pre {
+		max-height: 90px;
+		overflow: auto;
+		color: #53615a;
+		font:
+			400 0.53125rem/1.55 IBM Plex Mono,
+			monospace;
+	}
+	.syntax-preview .json-key {
+		color: #176b44;
+	}
+	.syntax-preview .json-string {
+		color: #96601b;
+	}
+	.syntax-preview .json-number {
+		color: #356d91;
+	}
+	.syntax-preview .json-bool {
+		color: #76519b;
+	}
+	.lifecycle {
+		margin-top: 15px;
+		padding: 13px;
+		border: 1px solid #e0e6e2;
+		border-radius: 8px;
+		background: #fafcfa;
+	}
+	.lifecycle-track {
+		display: grid;
+		grid-template-columns: 1fr 25px 1fr 25px 1fr;
+		align-items: center;
+	}
+	.lifecycle-track > i {
+		height: 1px;
+		background: #d9e0dc;
+	}
+	.generator-footer {
+		padding: 13px 20px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-top: 1px solid var(--soft-line);
+		background: #fafbfa;
+	}
+	@media (max-width: 650px) {
+		.dialog-footer,
+		.generator-footer {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+		.dialog-footer > div,
+		.generator-footer > div {
+			width: 100%;
+		}
+		.dialog-footer .button,
+		.generator-footer .button {
+			flex: 1;
+		}
+		.dialog-body,
+		.generator-body {
+			max-height: calc(100vh - 220px);
+		}
+		.scenario {
+			grid-template-columns: 31px 1fr;
+		}
+		.expected {
+			grid-column: 2;
+			width: max-content;
+		}
+		.lifecycle-track {
+			grid-template-columns: 1fr;
+			gap: 7px;
+		}
+		.lifecycle-track > i {
+			display: none;
+		}
+	}
+	.dialog-footer,
+	.decision-footer,
+	.generator-footer {
+		background: #f7f2e9;
+	}
+	.scenario {
+		border-radius: 2px;
+	}
+	.scenario:hover,
+	.scenario.selected {
+		border-color: #5750cc;
+		background: #f2f0ff;
+	}
+	.editor-wrap,
+	.lifecycle {
+		border-radius: 2px;
+	}
+	.editor-wrap {
+		border-color: #24215c;
+		background: #1b1945;
+	}
+	.dialog-footer > p,
+	.generator-footer > p {
+		font-size: 0.625rem;
+	}
+	.decision-copy,
+	.decision-body textarea,
+	.generator-intro {
+		font-size: 0.75rem;
+	}
+	.decision-hero span,
+	.decision-body .field-help,
+	.decision-body .required,
+	.manual-editor .field-help,
+	.editor-lines {
+		font-size: 0.6875rem;
+	}
+	.tabs button,
+	.generator-label > label,
+	.generator-label button {
+		font-size: 0.6875rem;
+	}
+	.generator-label small,
+	.scenario-copy small,
+	.expected {
+		font-size: 0.625rem;
+	}
+	.scenario-copy strong {
+		font-size: 0.75rem;
+	}
+	.code-block,
+	.editor-wrap,
+	.syntax-preview pre {
+		max-width: 100%;
+	}
+
+	@media (max-width: 650px) {
+		.page-heading,
+		.section-heading,
+		.policy-receipt,
+		.detail-summary,
+		.code-heading,
+		.dialog-footer,
+		.generator-footer,
+		.theme-coming-soon {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+		.dialog-header,
+		.dialog-body,
+		.decision-body,
+		.generator-body,
+		.profile-dialog-body {
+			padding-inline: 1rem;
+		}
+		.dialog-body,
+		.decision-body,
+		.generator-body {
+			max-height: calc(100dvh - 12rem);
+			overflow-y: auto;
+		}
+		.dialog-footer,
+		.generator-footer,
+		.decision-footer {
+			width: 100%;
+		}
+		.dialog-footer > div,
+		.generator-footer > div,
+		.decision-footer > div {
+			width: 100%;
+		}
+		.dialog-footer > p,
+		.generator-footer > p {
+			font-size: 0.6875rem;
+		}
+		.generator-label {
+			align-items: flex-start;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+		}
+		.scenario {
+			grid-template-columns: 2rem minmax(0, 1fr);
+		}
+		.scenario-icon {
+			width: 2rem;
+			height: 2rem;
+		}
+		.editor-wrap {
+			width: 100%;
+			grid-template-columns: 2rem minmax(0, 1fr);
+		}
+		.editor-wrap textarea {
+			min-width: 0;
+			font-size: 0.6875rem;
+		}
+		.lifecycle-track {
+			min-width: 0;
+		}
+	}
+
+}
+
+.generator-dialog {
+	width: min(850px, calc(100vw - 32px));
+	max-height: min(900px, calc(100dvh - 24px));
+}
+
+.generator-dialog .dialog-header {
+	padding: 22px 28px;
+}
+
+.generator-dialog .dialog-title {
+	gap: 16px;
+}
+
+.generator-dialog .dialog-title h2 {
+	font-size: 1.5rem;
+}
+
+.generator-dialog .tool-name {
+	font-size: 0.875rem;
+}
+
+.generator-dialog .icon-button {
+	width: 40px;
+	height: 40px;
+}
+
+.generator-dialog .generator-body {
+	padding: 26px 28px;
+	max-height: calc(100dvh - 220px);
+}
+
+.generator-dialog .generator-intro {
+	font-size: 1rem;
+	line-height: 1.6;
+}
+
+.generator-dialog .tabs {
+	margin: 22px 0;
+	padding: 4px;
+}
+
+.generator-dialog .tabs button {
+	min-height: 48px;
+	font-size: 1rem;
+}
+
+.generator-dialog .generator-label {
+	margin: 18px 2px 10px;
+}
+
+.generator-dialog .generator-label > span,
+.generator-dialog .generator-label > label {
+	font-size: 1rem;
+}
+
+.generator-dialog .generator-label small,
+.generator-dialog .manual-editor .field-help {
+	font-size: 0.875rem;
+}
+
+.generator-dialog .generator-label button {
+	font-size: 0.9375rem;
+}
+
+.generator-dialog .field-error {
+	font-size: 0.9375rem;
+	line-height: 1.5;
+}
+
+.generator-dialog .scenario-list {
+	gap: 10px;
+}
+
+.generator-dialog .scenario {
+	min-height: 80px;
+	padding: 15px;
+	grid-template-columns: 40px minmax(0, 1fr) auto;
+	gap: 14px;
+}
+
+.generator-dialog .scenario-icon {
+	width: 40px;
+	height: 40px;
+}
+
+.generator-dialog .scenario-copy strong {
+	font-size: 1rem;
+}
+
+.generator-dialog .scenario-copy small {
+	font-size: 0.875rem;
+	line-height: 1.45;
+}
+
+.generator-dialog .expected {
+	padding: 6px 9px;
+	font-size: 0.8125rem;
+}
+
+.generator-dialog .editor-wrap {
+	height: 320px;
+}
+
+.generator-dialog .editor-lines,
+.generator-dialog .editor-wrap textarea {
+	font-size: 0.8125rem;
+	line-height: 1.6;
+}
+
+.generator-dialog .editor-lines span {
+	height: 1.6em;
+}
+
+.generator-dialog .syntax-preview > span {
+	font-size: 0.75rem;
+}
+
+.generator-dialog .syntax-preview pre {
+	font-size: 0.8125rem;
+}
+
+.generator-dialog .life-step strong,
+.generator-dialog .generated-receipt strong {
+	font-size: 0.875rem;
+}
+
+.generator-dialog .life-step small,
+.generator-dialog .generated-receipt p {
+	font-size: 0.75rem;
+}
+
+.generator-dialog .life-step > span {
+	width: 30px;
+	height: 30px;
+}
+
+.generator-dialog .lifecycle-track {
+	gap: 8px;
+}
+
+.generator-dialog .generator-footer {
+	padding: 18px 28px;
+}
+
+.generator-dialog .generator-footer > p {
+	font-size: 0.875rem;
+}
+
+.generator-dialog .generator-footer .button {
+	min-height: 44px;
+	padding-inline: 18px;
+	font-size: 0.9375rem;
+}
+
+@media (max-width: 650px) {
+	.generator-dialog .dialog-header {
+		padding: 16px;
+	}
+
+	.generator-dialog .generator-body {
+		padding: 20px 16px;
+	}
+
+	.generator-dialog .scenario {
+		grid-template-columns: 40px minmax(0, 1fr);
+	}
+
+	.generator-dialog .expected {
+		grid-column: 2;
+		justify-self: start;
+	}
+
+	.generator-dialog .generator-footer {
+		padding: 16px;
+	}
+}
+
+@scope (.redesign) {
+	.generator-dialog[open] {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.generator-dialog .dialog-header,
+	.generator-dialog .generator-footer {
+		flex: 0 0 auto;
+	}
+
+	.generator-dialog .generator-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		max-height: none;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+
+	.generator-dialog .tabs {
+		gap: 0.5rem;
+	}
+
+	@media (max-width: 650px) {
+		.generator-dialog[open] {
+			width: 92%;
+			height: calc(100dvh - 1rem);
+			max-height: calc(100dvh - 1rem);
+		}
+	}
+}

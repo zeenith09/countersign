@@ -2,7 +2,7 @@
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ConsoleActivity } from "../../../src/features/console/legacy/ConsoleActivity";
+import { ConsoleActivity } from "../../../src/components/history/ConsoleActivity";
 
 describe("legacy ConsoleActivity", () => {
   afterEach(() => {

@@ -1,0 +1,131 @@
+@scope (.redesign) {
+	.profile-dialog {
+		width: min(440px, calc(100vw - 30px));
+	}
+	.profile-dialog-avatar {
+		width: 42px;
+		height: 42px;
+		flex: 0 0 42px;
+	}
+	.profile-dialog-body {
+		padding: 20px;
+	}
+	.profile-dialog-body > label {
+		display: block;
+		margin-bottom: 7px;
+		color: #37334f;
+		font-size: 0.8125rem;
+		font-weight: 600;
+	}
+	.profile-dialog-body > input {
+		width: 100%;
+		min-height: 42px;
+		margin-bottom: 18px;
+		padding: 9px 11px;
+		border: 1px solid #cfc9bd;
+		border-radius: 2px;
+		background: #fffdf8;
+		color: #201e4f;
+		font-size: 0.9375rem;
+	}
+	.profile-dialog-body > input:focus-visible,
+	.profile-color-control input:focus-visible {
+		outline: 2px solid #3830a4;
+		outline-offset: 2px;
+	}
+	.profile-color-control {
+		display: flex;
+		align-items: center;
+		gap: 11px;
+	}
+	.profile-color-control input {
+		width: 52px;
+		height: 42px;
+		padding: 3px;
+		border: 1px solid #cfc9bd;
+		border-radius: 2px;
+		background: #fffdf8;
+		cursor: pointer;
+	}
+	.profile-color-control span {
+		color: #5e596a;
+		font:
+			500 0.75rem "IBM Plex Mono",
+			monospace;
+	}
+	.theme-coming-soon {
+		margin-top: 21px;
+		padding-top: 17px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		border-top: 1px solid #ded9ce;
+		color: #565166;
+		font-size: 0.8125rem;
+	}
+	.theme-coming-soon button {
+		width: 38px;
+		height: 22px;
+		padding: 3px;
+		border: 1px solid #aaa6b4;
+		border-radius: 12px;
+		background: #d3d0d9;
+	}
+	.theme-coming-soon button span {
+		display: block;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: #f7f6f9;
+	}
+	.theme-coming-soon strong {
+		margin-left: auto;
+		color: #58635d;
+		font-size: 0.6875rem;
+		font-weight: 500;
+	}
+
+}
+
+.profile-dialog {
+	width: min(440px, calc(100vw - 24px));
+	max-height: calc(100dvh - 24px);
+}
+
+.profile-dialog form {
+	max-height: inherit;
+	display: flex;
+	flex-direction: column;
+}
+
+.profile-dialog .dialog-header,
+.profile-dialog .decision-footer {
+	flex: 0 0 auto;
+}
+
+.profile-dialog-body {
+	min-height: 0;
+	overflow-y: auto;
+}
+
+@media (max-width: 650px) {
+	.profile-dialog {
+		width: calc(100vw - 32px);
+		max-width: calc(100vw - 32px);
+		margin-inline: auto;
+	}
+
+	.profile-dialog .dialog-header,
+	.profile-dialog .profile-dialog-body,
+	.profile-dialog .decision-footer {
+		padding-inline: 16px;
+	}
+
+	.profile-dialog .dialog-header {
+		padding-block: 16px;
+	}
+
+	.profile-dialog .decision-footer {
+		padding-block: 14px;
+	}
+}

@@ -2,11 +2,11 @@
 
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConsoleSnapshot } from "../../../src/features/console/contract";
-import { fetchConsoleSnapshot } from "../../../src/features/console/api-client";
-import { useConsoleSnapshot } from "../../../src/features/console/hooks/use-console-snapshot";
+import type { ConsoleSnapshot } from "../../../src/lib/console/contract";
+import { fetchConsoleSnapshot } from "../../../src/lib/console/api-client";
+import { useConsoleSnapshot } from "../../../src/hooks/use-console-snapshot";
 
-vi.mock("../../../src/features/console/api-client", () => ({
+vi.mock("../../../src/lib/console/api-client", () => ({
   fetchConsoleSnapshot: vi.fn(),
   fetchActionStatus: vi.fn(),
   postActionDecision: vi.fn(),

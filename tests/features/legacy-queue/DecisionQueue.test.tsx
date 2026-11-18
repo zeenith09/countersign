@@ -29,8 +29,8 @@ vi.mock("react", async (importOriginal) => {
 });
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: state.refresh }) }));
 
-import { DecisionQueue } from "../../../src/features/legacy-queue/DecisionQueue";
-import { ActionDetails, QueueList, type QueueAction } from "../../../src/features/legacy-queue/QueueList";
+import { DecisionQueue } from "../../../src/components/legacy-queue/DecisionQueue";
+import { ActionDetails, QueueList, type QueueAction } from "../../../src/components/legacy-queue/QueueList";
 
 const action: QueueAction = {
   id: "c076fb00-26d9-4dfd-9f31-000000000001",

@@ -1,0 +1,683 @@
+@scope (.redesign) {
+	.reasoning span,
+	.detail-block > span,
+	.detail-summary > div > span,
+	.matched-rule > div > span,
+	.code-heading > div > span {
+		display: block;
+		color: #58635d;
+		font-size: 0.53125rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+	}
+	.dialog {
+		margin: auto;
+		padding: 0;
+		overflow: hidden;
+		border: 1px solid #cfd8d2;
+		border-radius: 13px;
+		background: #fff;
+		color: var(--ink);
+		box-shadow:
+			0 24px 80px rgba(13, 28, 19, 0.22),
+			0 5px 20px rgba(13, 28, 19, 0.1);
+	}
+	.dialog::backdrop {
+		background: rgba(9, 17, 12, 0.55);
+		backdrop-filter: blur(3px);
+	}
+	.detail-dialog {
+		width: min(690px, calc(100vw - 30px));
+		max-height: min(820px, calc(100vh - 30px));
+	}
+	.dialog-header {
+		padding: 17px 19px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1px solid var(--soft-line);
+	}
+	.dialog-title {
+		display: flex;
+		align-items: center;
+		gap: 11px;
+	}
+	.dialog-title h2 {
+		margin-top: 3px;
+		font-size: 1.0625rem;
+		font-weight: 650;
+		letter-spacing: -0.025em;
+	}
+	.dialog-body {
+		padding: 18px 20px 20px;
+		overflow: auto;
+		max-height: calc(100vh - 190px);
+	}
+	.detail-summary {
+		padding: 13px 14px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		border-radius: 8px;
+		background: #f5f8f6;
+	}
+	.detail-summary p {
+		margin-top: 5px;
+		color: #344139;
+		font-size: 0.71875rem;
+	}
+	.detail-grid {
+		margin-top: 14px;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		border: 1px solid var(--soft-line);
+		border-radius: 8px;
+	}
+	.detail-block {
+		padding: 12px;
+	}
+	.detail-block.wide {
+		grid-column: 1 / -1;
+		border-bottom: 1px solid var(--soft-line);
+	}
+	.detail-block:nth-child(2) {
+		border-right: 1px solid var(--soft-line);
+	}
+	.detail-block p {
+		margin-top: 5px;
+		color: #46524b;
+		font-size: 0.65625rem;
+		line-height: 1.5;
+	}
+	.detail-block strong {
+		display: block;
+		margin-top: 5px;
+		color: #36433b;
+		font-size: 0.65625rem;
+	}
+	.detail-block small {
+		display: block;
+		margin-top: 3px;
+		color: #58635d;
+		font-size: 0.53125rem;
+	}
+	.matched-rule {
+		margin: 14px 0;
+		padding: 12px;
+		display: flex;
+		gap: 10px;
+		border: 1px solid #d9e7de;
+		border-radius: 8px;
+		background: #f3f8f5;
+	}
+	.matched-rule svg {
+		color: #2a7650;
+	}
+	.matched-rule strong {
+		display: block;
+		margin-top: 3px;
+		color: #315542;
+		font:
+			500 0.625rem IBM Plex Mono,
+			monospace;
+	}
+	.matched-rule p {
+		margin-top: 3px;
+		color: #58635d;
+		font-size: 0.59375rem;
+	}
+	.code-heading {
+		margin: 15px 2px 8px;
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+	}
+	.code-heading small {
+		display: block;
+		margin-top: 3px;
+		color: #58635d;
+		font-size: 0.53125rem;
+	}
+	.code-heading button {
+		padding: 5px 7px;
+		display: flex;
+		gap: 5px;
+		align-items: center;
+		border: 1px solid #dce2df;
+		border-radius: 5px;
+		color: #5e6a63;
+		font-size: 0.53125rem;
+	}
+	.code-block {
+		padding: 14px 16px;
+		overflow: auto;
+		border: 1px solid #26302a;
+		border-radius: 8px;
+		background: #151d18;
+		color: #b8c5bd;
+		font:
+			400 0.625rem/1.65 IBM Plex Mono,
+			monospace;
+		tab-size: 2;
+	}
+	.dialog-footer {
+		padding: 13px 19px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 14px;
+		border-top: 1px solid var(--soft-line);
+		background: #fafbfa;
+	}
+	.decision-dialog {
+		width: min(490px, calc(100vw - 30px));
+	}
+	.decision-hero {
+		padding: 20px;
+		display: flex;
+		align-items: flex-start;
+		gap: 11px;
+		border-bottom: 1px solid;
+	}
+	.decision-hero.approved {
+		background: #f0f8f3;
+		border-color: #d7eade;
+	}
+	.decision-hero.denied {
+		background: #fcf2f3;
+		border-color: #f0dadd;
+	}
+	.decision-symbol {
+		width: 35px;
+		height: 35px;
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: white;
+	}
+	.approved .decision-symbol {
+		color: var(--green);
+	}
+	.denied .decision-symbol {
+		color: var(--red);
+	}
+	.decision-hero p {
+		color: #58635d;
+		font-size: 0.53125rem;
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+	.decision-hero h2 {
+		margin-top: 3px;
+		font-size: 1rem;
+		font-weight: 650;
+	}
+	.decision-hero span {
+		display: block;
+		margin-top: 4px;
+		color: #58635d;
+		font:
+			400 0.53125rem IBM Plex Mono,
+			monospace;
+	}
+	.decision-hero .icon-button {
+		margin-left: auto;
+		background: rgba(255, 255, 255, 0.7);
+	}
+	.decision-body {
+		padding: 18px 20px;
+	}
+	.decision-copy {
+		margin-bottom: 17px;
+		color: #647068;
+		font-size: 0.65625rem;
+		line-height: 1.5;
+	}
+	.decision-copy strong {
+		color: #3a463f;
+	}
+	.decision-body label {
+		position: relative;
+		margin-top: 12px;
+		display: block;
+		color: #455149;
+		font-size: 0.59375rem;
+		font-weight: 600;
+	}
+	.decision-body input,
+	.decision-body textarea {
+		width: 100%;
+		margin-top: 6px;
+		padding: 9px 10px;
+		border: 1px solid #ccd6d0;
+		border-radius: 7px;
+		background: white;
+		color: #27332c;
+		font-size: 0.6875rem;
+	}
+	.decision-body textarea {
+		min-height: 83px;
+		resize: vertical;
+		line-height: 1.45;
+	}
+	.decision-body input:focus,
+	.decision-body textarea:focus {
+		border-color: #438963;
+		box-shadow: 0 0 0 3px rgba(38, 130, 79, 0.11);
+	}
+	.decision-body [aria-invalid="true"] {
+		border-color: #c84c55;
+	}
+	.required {
+		position: absolute;
+		right: 0;
+		color: #a74b51;
+		font-size: 0.5rem;
+		font-weight: 500;
+	}
+	.field-help,
+	.field-error {
+		margin-top: 5px;
+		font-size: 0.53125rem;
+	}
+	.field-help {
+		color: #58635d;
+	}
+	.field-error {
+		color: #b43c45;
+	}
+	.live-status {
+		min-height: 28px;
+		margin-top: 10px;
+		padding: 0 9px;
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		border-radius: 6px;
+		font-size: 0.5625rem;
+	}
+	.live-status:empty {
+		display: none;
+	}
+	.live-status.loading {
+		color: #67552c;
+		background: #fff8e9;
+	}
+	.live-status.success {
+		color: #1d6842;
+		background: #eaf7f0;
+	}
+	.live-status.error {
+		color: #a63e46;
+		background: #fbebed;
+	}
+	.spinner {
+		width: 12px;
+		height: 12px;
+		border: 2px solid #dfcfaa;
+		border-top-color: #8b7036;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+	.decision-footer {
+		padding: 13px 20px;
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		border-top: 1px solid var(--soft-line);
+		background: #fafbfa;
+	}
+	@media (max-width: 650px) {
+		.detail-grid {
+			grid-template-columns: 1fr;
+		}
+		.detail-block:nth-child(2) {
+			border-right: 0;
+			border-bottom: 1px solid var(--soft-line);
+		}
+	}
+	.dialog {
+		border: 1px solid #29246f;
+		border-radius: 4px;
+		box-shadow: 12px 12px 0 rgba(21, 18, 70, 0.25);
+	}
+	.dialog::backdrop {
+		background: rgba(29, 24, 83, 0.52);
+		backdrop-filter: blur(5px) saturate(0.7);
+	}
+	.dialog-header {
+		border-color: #d9d4ca;
+		background: #f8f4ec;
+	}
+	.dialog-title h2 {
+		color: #201e4f;
+		font-size: 1.25rem;
+	}
+	.dialog .tool-icon.large {
+		border-radius: 50%;
+		background: #ddd9ff;
+		color: #3a33a6;
+	}
+	.detail-summary {
+		border-radius: 2px;
+		background: #eeecff;
+	}
+	.detail-grid,
+	.matched-rule,
+	.code-block {
+		border-radius: 2px;
+	}
+	.matched-rule {
+		border-color: #ccc6ed;
+		background: #f0eeff;
+	}
+	.matched-rule svg {
+		color: #4a43bb;
+	}
+	.code-block {
+		border-color: #1b1945;
+		background: #1b1945;
+	}
+	.decision-hero.approved {
+		background: #e3f5ed;
+	}
+	.decision-hero.denied {
+		background: #ffebea;
+	}
+	.reasoning span,
+	.policy-row span,
+	.code-heading span {
+		font-size: 0.625rem;
+	}
+	.detail-summary p {
+		font-size: 0.8125rem;
+	}
+	.detail-block > span,
+	.matched-rule span {
+		font-size: 0.625rem;
+	}
+	.detail-block p,
+	.detail-block strong {
+		font-size: 0.75rem;
+	}
+	.detail-block small,
+	.code-heading small,
+	.code-heading button {
+		font-size: 0.625rem;
+	}
+	.matched-rule strong {
+		font-size: 0.6875rem;
+	}
+	.matched-rule p {
+		font-size: 0.71875rem;
+	}
+	.code-block {
+		font-size: 0.6875rem;
+	}
+	.decision-hero p,
+	.decision-body label,
+	.required,
+	.field-error,
+	.live-status {
+		font-size: 0.6875rem;
+	}
+	.app-shell,
+	main,
+	.global-header,
+	.page,
+	.card-content,
+	.detail-summary > div,
+	.detail-block,
+	.policy-row > div {
+		min-width: 0;
+	}
+	.card-title-row h3,
+	.summary,
+	.reasoning p,
+	.card-meta span,
+	.policy-row strong,
+	.policy-row p,
+	.detail-summary p,
+	.detail-block p,
+	.detail-block strong,
+	.matched-rule p,
+	.dialog-title h2 {
+		overflow-wrap: anywhere;
+	}
+	.dialog {
+		max-width: calc(100vw - 2rem);
+		max-height: calc(100dvh - 2rem);
+	}
+
+	@media (max-width: 650px) {
+		.dialog {
+			width: calc(100vw - 1rem);
+			max-width: calc(100vw - 1rem);
+			max-height: calc(100dvh - 1rem);
+		}
+		.dialog-title {
+			min-width: 0;
+		}
+		.dialog-title > div:last-child {
+			min-width: 0;
+		}
+		.detail-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.decision-footer {
+			flex-wrap: wrap;
+			justify-content: stretch;
+		}
+		.decision-footer .button {
+			flex: 1 1 40%;
+		}
+	}
+
+}
+
+.detail-dialog {
+	width: min(850px, calc(100vw - 32px));
+	max-height: min(900px, calc(100dvh - 24px));
+}
+
+.detail-dialog .dialog-header {
+	padding: 22px 28px;
+}
+
+.detail-dialog .dialog-title h2 {
+	font-size: 1.5rem;
+}
+
+.detail-dialog .tool-name {
+	font-size: 0.875rem;
+}
+
+.detail-dialog .icon-button {
+	width: 40px;
+	height: 40px;
+}
+
+.detail-dialog .dialog-body {
+	padding: 26px 28px;
+	max-height: calc(100dvh - 220px);
+}
+
+.detail-dialog .detail-summary > div > span,
+.detail-dialog .detail-block > span,
+.detail-dialog .matched-rule > div > span,
+.detail-dialog .code-heading > div > span {
+	font-size: 0.875rem;
+}
+
+.detail-dialog .detail-summary p {
+	font-size: 1rem;
+	line-height: 1.55;
+}
+
+.detail-dialog .detail-block p,
+.detail-dialog .detail-block strong,
+.detail-dialog .matched-rule p {
+	font-size: 0.9375rem;
+	line-height: 1.5;
+}
+
+.detail-dialog .detail-block small,
+.detail-dialog .code-heading small {
+	font-size: 0.8125rem;
+}
+
+.detail-dialog .matched-rule strong {
+	font-size: 0.875rem;
+}
+
+.detail-dialog .code-heading button {
+	min-height: 40px;
+	padding: 6px 10px;
+	font-size: 0.875rem;
+}
+
+.detail-dialog .code-block {
+	font-size: 0.8125rem;
+}
+
+.detail-dialog .dialog-footer {
+	padding: 18px 28px;
+}
+
+.detail-dialog .dialog-footer > p {
+	font-size: 0.875rem;
+	line-height: 1.45;
+}
+
+.detail-dialog .dialog-footer .button {
+	min-height: 44px;
+	font-size: 0.9375rem;
+}
+
+.decision-dialog {
+	width: min(560px, calc(100vw - 32px));
+}
+
+.decision-hero {
+	padding: 24px;
+}
+
+.decision-hero p,
+.decision-body label {
+	font-size: 0.875rem;
+}
+
+.decision-hero h2 {
+	font-size: 1.5rem;
+}
+
+.decision-hero span {
+	font-size: 0.8125rem;
+}
+
+.decision-body {
+	padding: 24px;
+}
+
+.decision-copy {
+	font-size: 1rem;
+	line-height: 1.55;
+}
+
+.decision-body input,
+.decision-body textarea {
+	min-height: 46px;
+	padding: 11px 12px;
+	font-size: 1rem;
+}
+
+.decision-body textarea {
+	min-height: 110px;
+}
+
+.required,
+.field-error {
+	font-size: 0.875rem;
+}
+
+.field-help {
+	font-size: 0.875rem;
+}
+
+.live-status {
+	font-size: 0.875rem;
+}
+
+.decision-footer .button {
+	min-height: 44px;
+	font-size: 0.9375rem;
+}
+
+@media (max-width: 650px) {
+
+	.detail-dialog .dialog-header,
+	.detail-dialog .dialog-footer {
+		padding: 16px;
+	}
+
+	.detail-dialog .dialog-body {
+		padding: 20px 16px;
+		max-height: calc(100dvh - 200px);
+	}
+
+	.detail-dialog .dialog-footer > div {
+		width: 100%;
+	}
+
+	.detail-dialog .dialog-footer .button {
+		flex: 1;
+	}
+
+	.decision-hero,
+	.decision-body {
+		padding: 18px;
+	}
+}
+
+@scope (.redesign) {
+	.detail-dialog[open] {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.detail-dialog .dialog-inner {
+		display: flex;
+		flex: 1 1 auto;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.detail-dialog .dialog-header,
+	.detail-dialog .dialog-footer {
+		flex: 0 0 auto;
+	}
+
+	.detail-dialog .dialog-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		max-height: none;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+
+	@media (max-width: 650px) {
+		.detail-dialog[open] {
+			width: 92%;
+			height: calc(100dvh - 1rem);
+			max-height: calc(100dvh - 1rem);
+		}
+
+		.detail-dialog .dialog-inner {
+			height: 100%;
+		}
+	}
+}

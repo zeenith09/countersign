@@ -1,5 +1,5 @@
-import { IdentifierReferenceContent } from "../../../features/actions/IdentifierReferenceContent";
-import { getIdentifierReferences } from "../../../features/actions/identifier-references";
+import { IdentifierReferenceContent } from "../../../components/actions/IdentifierReferenceContent";
+import { getIdentifierReferences } from "../../../lib/actions/identifier-references";
 
 export default async function RecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

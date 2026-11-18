@@ -2,17 +2,63 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConsoleSnapshot } from "../../../src/features/console/contract";
-import { fetchActionStatus, fetchConsoleSnapshot, postActionDecision } from "../../../src/features/console/api-client";
-import App from "../../../src/features/console/Console";
+import { usePathname } from "next/navigation";
+import type { ConsoleSnapshot } from "../../../src/lib/console/contract";
+import { fetchActionStatus, fetchConsoleSnapshot, postActionDecision } from "../../../src/lib/console/api-client";
+import { ConsoleLayout } from "../../../src/components/layout/ConsoleLayout";
+import ApprovalPage from "../../../src/components/approval/page";
+import HistoryPage from "../../../src/components/history/page";
+import LogPage from "../../../src/components/log/page";
+import OverviewPage from "../../../src/components/overview/page";
 import { mockDialogMethods } from "./dom-test-helpers";
 
-vi.mock("../../../src/features/console/api-client", () => ({
+vi.mock("next/navigation", async () => {
+  const React = await vi.importActual<typeof import("react")>("react");
+  return {
+    usePathname: () => React.useSyncExternalStore(
+      (callback) => {
+        window.addEventListener("popstate", callback);
+        return () => window.removeEventListener("popstate", callback);
+      },
+      () => window.location.pathname,
+      () => "/",
+    ),
+    useRouter: () => ({
+      push: (path: string) => {
+        window.history.pushState(null, "", path);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      },
+    }),
+  };
+});
+
+vi.mock("../../../src/lib/console/api-client", () => ({
   fetchConsoleSnapshot: vi.fn(),
   fetchActionStatus: vi.fn(),
   postActionDecision: vi.fn(),
   postActionProposal: vi.fn(),
 }));
+
+function CurrentConsolePage() {
+  switch (usePathname()) {
+    case "/approval":
+      return <ApprovalPage />;
+    case "/history":
+      return <HistoryPage />;
+    case "/log":
+      return <LogPage />;
+    default:
+      return <OverviewPage />;
+  }
+}
+
+function App() {
+  return (
+    <ConsoleLayout>
+      <CurrentConsolePage />
+    </ConsoleLayout>
+  );
+}
 
 const action: ConsoleSnapshot["actions"][number] = {
   id: "action-1",

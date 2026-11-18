@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ReviewerProfileDialog } from "../../../src/features/console/components/ReviewerProfileDialog";
+import { ReviewerProfileDialog } from "../../../src/components/dialogs/ReviewerProfileDialog";
 import { mockDialogMethods } from "./dom-test-helpers";
 
 let restoreDialogMethods: (() => void) | undefined;

@@ -71,7 +71,7 @@ only for an approved winner. The database stores the authoritative state.
    after approval commits, no execution result is returned or stored. The
    console can re-read the decision status but cannot verify execution.
 3. **Conflict wording overstates attribution:** on any 409 the
-   [console](../src/features/legacy-queue/DecisionQueue.tsx) says “Already decided by someone
+   [console](../src/components/legacy-queue/DecisionQueue.tsx) says “Already decided by someone
    else,” even if an earlier request by the same reviewer succeeded, the row is
    in another non-pending state, or the status re-read fails. On failure it also
    says `unknown`, but still asserts someone else decided it.

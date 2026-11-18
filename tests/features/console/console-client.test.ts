@@ -4,9 +4,9 @@ import {
   fetchConsoleSnapshot,
   postActionDecision,
   postActionProposal,
-} from "../../../src/features/console/api-client";
-import { filterActivity, getConsoleCounts, sortPendingActions } from "../../../src/features/console/view-model";
-import type { ConsoleSnapshot } from "../../../src/features/console/contract";
+} from "../../../src/lib/console/api-client";
+import { filterActivity, getConsoleCounts, sortPendingActions } from "../../../src/lib/console/view-model";
+import type { ConsoleSnapshot } from "../../../src/lib/console/contract";
 
 const snapshot: ConsoleSnapshot = {
   actions: [
@@ -96,6 +96,13 @@ describe("console client and view-model helpers", () => {
       denied: null,
       auto: null,
       blocked: null,
+    });
+    expect(getConsoleCounts({ ...snapshot, counts: { pending: 1 } })).toEqual({
+      pending: 1,
+      approved: 0,
+      denied: 0,
+      auto: 0,
+      blocked: 0,
     });
     expect(filterActivity(snapshot.activity, "blocked").map((item) => item.id)).toEqual(["blocked"]);
     expect(filterActivity(snapshot.activity, "all")).toEqual(snapshot.activity);
