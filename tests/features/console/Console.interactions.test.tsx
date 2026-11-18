@@ -235,7 +235,9 @@ describe("console approval workflow", () => {
     if (!form) throw new Error("Decision form was not rendered.");
     fireEvent.submit(form);
 
-    await screen.findByText("Decision committed, but its stored status could not be refreshed.");
+    expect(
+      await screen.findByText("Decision committed, but its stored status could not be refreshed."),
+    ).toBeTruthy();
   });
 
   it("loads invalid saved preferences and clears the error after saving a profile", async () => {
