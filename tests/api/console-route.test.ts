@@ -119,6 +119,7 @@ describe("GET /api/console", () => {
           detail: "The agent wants to refund $400 for order ORDER-1001.",
           status: "approved",
           actor: "Alex · Human decision",
+          rule: "other-refunds-allowed",
           time: "Just now",
         },
         {
@@ -127,6 +128,7 @@ describe("GET /api/console", () => {
           detail: "The agent wants to refund $400 for order ORDER-1001.",
           status: "pending",
           actor: "Awaiting human decision",
+          rule: "other-refunds-allowed",
           time: "Just now",
         },
         {
@@ -134,7 +136,8 @@ describe("GET /api/console", () => {
           title: "issue refund",
           detail: "The agent wants to refund $400 for order ORDER-1001.",
           status: "auto_allowed",
-          actor: "Policy · other-refunds-allowed",
+          actor: "No reviewer decision",
+          rule: "other-refunds-allowed",
           time: "Just now",
         },
       ],
@@ -161,7 +164,7 @@ describe("GET /api/console", () => {
           event: "other_event",
           hash: "unknown-hash",
           createdAt: now.toISOString(),
-          principal: "Not recorded",
+          principal: "Unknown (not recorded)",
         },
       ],
     });
@@ -219,6 +222,79 @@ describe("GET /api/console", () => {
       rule: id,
       ruleDescription: description,
     })));
+  });
+
+  it("keeps unknown and missing rule ids distinct from configured descriptions", async () => {
+    const missingRule = { ...pendingAction, id: "missing-rule", policyRuleMatched: null };
+    const unknownRule = { ...pendingAction, id: "unknown-rule", policyRuleMatched: "future-rule" };
+    const noRuleMatch = { ...pendingAction, id: "no-rule", policyRuleMatched: "no_rule_match" };
+    const unsupportedTool = { ...pendingAction, id: "unsupported", policyRuleMatched: "unsupported_tool" };
+    actionFindMany
+      .mockResolvedValueOnce([missingRule, unknownRule, noRuleMatch, unsupportedTool])
+      .mockResolvedValueOnce([]);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.actions.map(({ id, rule, ruleDescription }: {
+      id: string;
+      rule: string;
+      ruleDescription: string;
+    }) => ({ id, rule, ruleDescription }))).toEqual([
+      { id: "missing-rule", rule: "Unknown (not recorded)", ruleDescription: "No description available" },
+      { id: "unknown-rule", rule: "future-rule", ruleDescription: "No description available" },
+      {
+        id: "no-rule",
+        rule: "no_rule_match",
+        ruleDescription: "No policy rule matched; reviewer approval is required.",
+      },
+      {
+        id: "unsupported",
+        rule: "unsupported_tool",
+        ruleDescription: "The submitted tool is not registered and is blocked.",
+      },
+    ]);
+  });
+
+  it("does not present missing or blank reviewers as human decisions", async () => {
+    const recent = [
+      { ...pendingAction, id: "no-decision", status: "approved", decision: null },
+      { ...pendingAction, id: "empty-reviewer", status: "denied", decision: { reviewer: "", outcome: "denied", reason: "" } },
+      { ...pendingAction, id: "whitespace-reviewer", status: "denied", decision: { reviewer: " \t ", outcome: "denied", reason: "" } },
+      { ...pendingAction, id: "missing-rule", status: "blocked", policyRuleMatched: null, decision: null },
+    ];
+    actionFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce(recent);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.activity.map(({ id, actor }: { id: string; actor: string }) => ({ id, actor }))).toEqual([
+      { id: "no-decision", actor: "No reviewer decision" },
+      { id: "empty-reviewer", actor: "No reviewer decision" },
+      { id: "whitespace-reviewer", actor: "No reviewer decision" },
+      { id: "missing-rule", actor: "No reviewer decision" },
+    ]);
+  });
+
+  it.each([
+    ["null", null],
+    ["array", []],
+    ["number", 7],
+    ["object", { name: "untrusted" }],
+  ])("labels non-string audit principals as unknown when both IDs are %s", async (_label, nonString) => {
+    auditFindMany.mockResolvedValue([{
+      id: "audit-untrusted-principal",
+      sequence: BigInt(1),
+      eventType: "action_submitted",
+      hash: "audit-hash",
+      createdAt: now,
+      payload: { reviewer: nonString, agent_id: nonString },
+    }]);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.audit[0].principal).toBe("Unknown (not recorded)");
   });
 
   it("returns the existing generic error response when a database query fails", async () => {

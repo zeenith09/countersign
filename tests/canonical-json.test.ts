@@ -12,6 +12,11 @@ describe("canonicalJson", () => {
       .toBe('{"10":5,"9":6,"B":2,"_x":4,"a":3,"b":1}');
   });
 
+  it("sorts keys regardless of their insertion order", () => {
+    expect(canonicalJson(Object.fromEntries([["b", 1], ["a", 2]]))).toBe('{"a":2,"b":1}');
+    expect(canonicalJson(Object.fromEntries([["a", 2], ["b", 1]]))).toBe('{"a":2,"b":1}');
+  });
+
   it("sorts nested objects while preserving nested array order", () => {
     expect(canonicalJson({ z: [{ z: 1, a: 2 }, [{ b: null, a: true }, 3]], a: "text" }))
       .toBe('{"a":"text","z":[{"a":2,"z":1},[{"a":true,"b":null},3]]}');
@@ -33,10 +38,26 @@ describe("canonicalJson", () => {
     expect(() => canonicalJson({ missing: undefined })).toThrow(TypeError);
     expect(() => canonicalJson([undefined])).toThrow(TypeError);
     expect(() => canonicalJson(Array(1))).toThrow(TypeError);
+    expect(() => canonicalJson([1, , 3])).toThrow("JSON arrays cannot contain holes or extra properties.");
     expect(() => canonicalJson(NaN)).toThrow(TypeError);
     expect(() => canonicalJson(BigInt(1))).toThrow(TypeError);
     expect(() => canonicalJson(new Date("2026-01-01T00:00:00.000Z"))).toThrow(TypeError);
     expect(() => canonicalJson({ [Symbol("hidden")]: 1 })).toThrow(TypeError);
+    const arrayGetter: unknown[] = [];
+    Object.defineProperty(arrayGetter, "0", { get: () => 1, enumerable: true });
+    expect(() => canonicalJson(arrayGetter)).toThrow("JSON arrays must contain only enumerable values.");
+    const nonEnumerableArray: unknown[] = [];
+    Object.defineProperty(nonEnumerableArray, "0", { value: 1, enumerable: false });
+    expect(() => canonicalJson(nonEnumerableArray)).toThrow("JSON arrays must contain only enumerable values.");
+    const objectGetter = Object.defineProperty({}, "hidden", { get: () => 1, enumerable: true });
+    expect(() => canonicalJson(objectGetter)).toThrow("JSON objects must contain only enumerable values.");
+    const nonEnumerableObject = Object.defineProperty({}, "hidden", { value: 1, enumerable: false });
+    expect(() => canonicalJson(nonEnumerableObject)).toThrow("JSON objects must contain only enumerable values.");
+    const missingDescriptor = new Proxy({}, {
+      ownKeys: () => ["missing"],
+      getOwnPropertyDescriptor: () => undefined,
+    });
+    expect(() => canonicalJson(missingDescriptor)).toThrow("JSON objects must contain only enumerable values.");
     const cyclic: { self?: unknown } = {};
     cyclic.self = cyclic;
     expect(() => canonicalJson(cyclic)).toThrow(TypeError);

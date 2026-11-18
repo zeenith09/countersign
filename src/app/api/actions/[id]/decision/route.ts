@@ -31,12 +31,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
+    // Zod's failed safeParse result always contains at least one issue.
+    const issue = parsed.error.issues[0]!;
     return Response.json({
-      message: issue
-        ? `${issue.path.join(".") ? `${issue.path.join(".")}: ` : ""}${issue.message}`
-        :
-        "Enter a reviewer and reason, and choose approve or deny.",
+      message: `${issue.path.join(".") ? `${issue.path.join(".")}: ` : ""}${issue.message}`,
     }, { status: 400 });
   }
 

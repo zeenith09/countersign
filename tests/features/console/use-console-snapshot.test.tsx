@@ -58,6 +58,27 @@ describe("useConsoleSnapshot", () => {
     expect(result.current.snapshotError).toBe("Console data could not be loaded.");
   });
 
+  it("uses the initial-load fallback for non-Error failures", async () => {
+    fetchSnapshotMock.mockRejectedValueOnce("unexpected failure");
+    const { result } = renderHook(() => useConsoleSnapshot());
+
+    await waitFor(() => {
+      expect(result.current.snapshotError).toBe("Console data could not be loaded.");
+    });
+  });
+
+  it("keeps the previous snapshot when a refresh fails with an Error", async () => {
+    fetchSnapshotMock.mockResolvedValueOnce(snapshot);
+    const { result } = renderHook(() => useConsoleSnapshot());
+    await waitFor(() => expect(result.current.snapshot).toEqual(snapshot));
+
+    fetchSnapshotMock.mockRejectedValueOnce(new Error("refresh failed"));
+    await act(async () => result.current.loadSnapshot());
+
+    expect(result.current.snapshot).toEqual(snapshot);
+    expect(result.current.snapshotError).toBe("refresh failed");
+  });
+
   it("ignores an initial response after the hook unmounts", async () => {
     let resolveSnapshot!: (value: ConsoleSnapshot) => void;
     fetchSnapshotMock.mockImplementationOnce(
@@ -70,5 +91,20 @@ describe("useConsoleSnapshot", () => {
       resolveSnapshot(snapshot);
     });
     expect(result.current.snapshot).toBeNull();
+  });
+
+  it("ignores an initial rejection after the hook unmounts", async () => {
+    let rejectSnapshot!: (error: unknown) => void;
+    fetchSnapshotMock.mockImplementationOnce(
+      () => new Promise((_resolve, reject) => { rejectSnapshot = reject; }),
+    );
+    const { result, unmount } = renderHook(() => useConsoleSnapshot());
+
+    unmount();
+    await act(async () => {
+      rejectSnapshot(new Error("late failure"));
+      await Promise.resolve();
+    });
+    expect(result.current.snapshotError).toBe("");
   });
 });

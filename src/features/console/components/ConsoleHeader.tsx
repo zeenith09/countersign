@@ -93,6 +93,7 @@ export function ConsoleHeader({
             className="profile profile-button"
             type="button"
             onClick={onOpenProfile}
+            aria-label={`Reviewer profile: ${reviewer.trim() || "Reviewer not set"}`}
           >
             <div
               className="avatar"

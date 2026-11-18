@@ -73,8 +73,13 @@ class MockIntersectionObserver implements IntersectionObserver {
   }
 }
 
-async function openDecision(outcome: "approved" | "denied") {
+async function openQueueAndWaitForReview() {
+  fireEvent.click(screen.getByRole("button", { name: /Approval queue/ }));
   await screen.findByRole("button", { name: /Review action/ });
+}
+
+async function openDecision(outcome: "approved" | "denied") {
+  await openQueueAndWaitForReview();
   fireEvent.click(screen.getByRole("button", { name: /Review action/ }));
   await screen.findByRole("dialog", { name: /issue refund/i });
   fireEvent.click(screen.getByRole("button", { name: outcome === "approved" ? "Approve" : "Deny" }));
@@ -89,6 +94,7 @@ beforeEach(() => {
   fetchStatusMock.mockReset().mockResolvedValue("pending");
   postDecisionMock.mockReset().mockResolvedValue(new Response(null, { status: 200 }));
   window.localStorage.clear();
+  window.history.replaceState(null, "", "/");
   restoreDialogMethods = mockDialogMethods();
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     callback(0);
@@ -112,7 +118,7 @@ describe("console approval workflow", () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
 
     await waitFor(() => {
       expect(
@@ -131,7 +137,7 @@ describe("console approval workflow", () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
     const view = render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
 
     const target = view.container.querySelector(".action-card");
     if (!target) throw new Error("Action card was not rendered.");
@@ -171,18 +177,38 @@ describe("console approval workflow", () => {
 
   it("navigates to overview and audit pages and opens the action generator", async () => {
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
-
-    fireEvent.click(screen.getByRole("button", { name: "Overview" }));
     expect(screen.getByRole("heading", { name: "Overview" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Approval queue/ }));
+    expect(window.location.pathname).toBe("/approval");
+    fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+    expect(window.location.pathname).toBe("/");
     expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: "smooth" });
 
+    fireEvent.click(screen.getByRole("button", { name: "Activity history" }));
+    expect(window.location.pathname).toBe("/history");
+    expect(screen.getByRole("heading", { name: "Activity history" })).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "Audit log" }));
+    expect(window.location.pathname).toBe("/log");
     expect(screen.getByRole("heading", { name: "Audit log" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Approval queue/ }));
+    expect(window.location.pathname).toBe("/approval");
     fireEvent.click(screen.getByRole("button", { name: "New action" }));
     expect(await screen.findByRole("dialog", { name: /Generate incoming action/ })).toBeTruthy();
+  });
+
+  it("restores the console page from browser history navigation", () => {
+    render(<App />);
+
+    window.history.pushState(null, "", "/history");
+    fireEvent.popState(window);
+    expect(screen.getByRole("heading", { name: "Activity history" })).toBeTruthy();
+
+    window.history.replaceState(null, "", "/approval");
+    fireEvent.popState(window);
+    expect(screen.getByRole("heading", { name: "Approval queue" })).toBeTruthy();
   });
 
   it("renders the audit page while the initial snapshot is still loading", async () => {
@@ -200,7 +226,7 @@ describe("console approval workflow", () => {
 
   it("opens the generator from the queue action", async () => {
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
 
     fireEvent.click(screen.getByRole("button", { name: "Generate incoming action" }));
     expect(await screen.findByRole("dialog", { name: /Generate incoming action/ })).toBeTruthy();
@@ -208,7 +234,7 @@ describe("console approval workflow", () => {
 
   it("closes action details and returns to them when a decision is cancelled", async () => {
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
     fireEvent.click(screen.getByRole("button", { name: /Review action/ }));
     await screen.findByRole("dialog", { name: /issue refund/i });
     fireEvent.click(screen.getByRole("button", { name: "Close action details" }));
@@ -246,7 +272,6 @@ describe("console approval workflow", () => {
       JSON.stringify({ reviewer: 42, color: "not-a-color" }),
     );
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
     fireEvent.click(screen.getByRole("button", { name: /Reviewer not set/ }));
     expect(
       await screen.findByText("Saved profile settings are invalid. Update them and save again."),
@@ -278,7 +303,7 @@ describe("console approval workflow", () => {
     };
 
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
     fireEvent.click(screen.getByRole("button", { name: /Review action/ }));
     await screen.findByRole("dialog", { name: /issue refund/i });
     fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
@@ -428,9 +453,7 @@ describe("console approval workflow", () => {
 
   it("navigates from a status metric and toggles the queue order", async () => {
     render(<App />);
-    await screen.findByRole("button", { name: /Review action/ });
-
-    fireEvent.click(screen.getByRole("button", { name: /Human-denied/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Human-denied/ }));
     expect(screen.getByRole("heading", { name: "Activity history" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Denied/ }).getAttribute("aria-pressed")).toBe("true");
 
@@ -461,7 +484,7 @@ describe("console approval workflow", () => {
     render(<App />);
     await screen.findByText("Service unavailable");
     fireEvent.click(screen.getByRole("button", { name: "Retry loading" }));
-    await screen.findByRole("button", { name: /Review action/ });
+    await openQueueAndWaitForReview();
     expect(fetchSnapshotMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -46,7 +46,7 @@ describe("console elements", () => {
       <Metric label="Blocked" value={3} tone="slate" onClick={vi.fn()} />,
     );
 
-    expect(staticMetric).toContain("—");
+    expect(staticMetric).toContain('class="metric-skeleton"');
     expect(staticMetric).not.toContain("<button");
     expect(interactiveMetric).toContain("<button");
     expect(interactiveMetric).toContain(">03</strong>");

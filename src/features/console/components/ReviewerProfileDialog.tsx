@@ -27,7 +27,17 @@ export function ReviewerProfileDialog({
 
   useEffect(() => {
     if (open) {
-      if (!dialog.current?.open) dialog.current?.showModal();
+      if (!dialog.current?.open) {
+        dialog.current?.showModal();
+        const compactViewport =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(max-width: 650px)").matches;
+        if (compactViewport) {
+          dialog.current?.querySelector<HTMLButtonElement>(".profile-dialog-close")?.focus();
+        } else {
+          dialog.current?.querySelector<HTMLInputElement>("#reviewer-name")?.focus();
+        }
+      }
     } else if (dialog.current?.open) {
       dialog.current.close();
     }
@@ -85,7 +95,7 @@ export function ReviewerProfileDialog({
               <h2 id="profile-dialog-title">Reviewer profile</h2>
             </div>
           </div>
-          <button type="button" className="icon-button" aria-label="Close reviewer profile" onClick={() => dialog.current?.close()}>
+          <button type="button" className="icon-button profile-dialog-close" aria-label="Close reviewer profile" onClick={() => dialog.current?.close()}>
             <Icon name="x" />
           </button>
         </div>
@@ -98,7 +108,6 @@ export function ReviewerProfileDialog({
             maxLength={100}
             autoComplete="name"
             required
-            autoFocus
           />
           <label htmlFor="reviewer-color">Profile color</label>
           <div className="profile-color-control">

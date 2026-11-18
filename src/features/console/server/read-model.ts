@@ -32,9 +32,13 @@ export async function getConsoleReadModel(prisma: PrismaClient): Promise<Console
       created: action.createdAt.getTime(),
       status: "pending",
       risk: "Risk not assessed",
-      rule: action.policyRuleMatched ?? "Not recorded",
+      rule: action.policyRuleMatched ?? "Unknown (not recorded)",
       ruleDescription: policy.rules.find((rule) => rule.id === action.policyRuleMatched)?.description
-        ?? "No configured rule description is available.",
+        ?? (action.policyRuleMatched === "no_rule_match"
+          ? "No policy rule matched; reviewer approval is required."
+          : action.policyRuleMatched === "unsupported_tool"
+            ? "The submitted tool is not registered and is blocked."
+            : "No description available"),
       parameters: action.parameters,
     })),
     counts: Object.fromEntries(counts.map((entry) => [entry.status, entry._count._all])),
@@ -44,10 +48,13 @@ export async function getConsoleReadModel(prisma: PrismaClient): Promise<Console
       detail: summarizeAction(action.tool, action.parameters),
       status: action.status,
       actor: action.decision
-        ? `${action.decision.reviewer} · Human decision`
+        ? action.decision.reviewer.trim()
+          ? `${action.decision.reviewer.trim()} · Human decision`
+          : "No reviewer decision"
         : action.status === "pending"
           ? "Awaiting human decision"
-          : `Policy · ${action.policyRuleMatched ?? "Not recorded"}`,
+          : "No reviewer decision",
+      rule: action.policyRuleMatched ?? "Unknown (not recorded)",
       time: formatAge(action.createdAt, now),
     })),
     audit: audit.map((entry) => ({
@@ -57,9 +64,12 @@ export async function getConsoleReadModel(prisma: PrismaClient): Promise<Console
       hash: entry.hash,
       createdAt: entry.createdAt.toISOString(),
       principal: typeof entry.payload === "object" && entry.payload !== null && !Array.isArray(entry.payload)
-        ? typeof entry.payload.reviewer === "string" ? entry.payload.reviewer
-          : typeof entry.payload.agent_id === "string" ? entry.payload.agent_id : "Not recorded"
-        : "Not recorded",
+        ? typeof entry.payload.reviewer === "string" && entry.payload.reviewer.trim()
+          ? entry.payload.reviewer.trim()
+          : typeof entry.payload.agent_id === "string" && entry.payload.agent_id.trim()
+            ? entry.payload.agent_id.trim()
+            : "Unknown (not recorded)"
+        : "Unknown (not recorded)",
     })),
   };
 }

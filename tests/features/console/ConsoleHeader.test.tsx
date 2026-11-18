@@ -31,7 +31,7 @@ describe("ConsoleHeader interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Overview" }));
     fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
     fireEvent.click(screen.getByRole("button", { name: "New action" }));
-    fireEvent.click(screen.getByRole("button", { name: /Alex/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Reviewer profile: Alex" }));
     expect(onNavigate).toHaveBeenCalledWith("overview");
     expect(onMobileNavChange).toHaveBeenCalledWith(true);
     expect(onOpenGenerator).toHaveBeenCalledOnce();

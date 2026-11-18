@@ -32,6 +32,7 @@ export const consoleSnapshotSchema = z.object({
     detail: z.string(),
     status: consoleStatusSchema,
     actor: z.string(),
+    rule: z.string().optional(),
     time: z.string(),
   })),
   audit: z.array(z.object({

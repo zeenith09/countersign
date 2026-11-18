@@ -135,6 +135,7 @@ export function Metric({
   tone: string;
   onClick?: () => void;
 }) {
+  const loading = value === null;
   const content = (
     <>
       <div className={`metric-icon ${tone}`}>
@@ -152,13 +153,21 @@ export function Metric({
         />
       </div>
       <div>
-        <strong>{value === null ? "—" : String(value).padStart(2, "0")}</strong>
+        <strong aria-hidden={loading}>
+          {loading ? <span className="metric-skeleton" /> : String(value).padStart(2, "0")}
+        </strong>
         <span>{label}</span>
       </div>
     </>
   );
   return onClick ? (
-    <button className="metric metric-button" type="button" onClick={onClick}>
+    <button
+      className="metric metric-button"
+      type="button"
+      onClick={onClick}
+      aria-busy={loading}
+      aria-label={loading ? `${label} count loading` : undefined}
+    >
       {content}
     </button>
   ) : (

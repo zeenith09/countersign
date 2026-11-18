@@ -60,6 +60,7 @@ describe("console presentation components", () => {
     expect(markup).toContain("refund-over-500");
     expect(markup).toContain("Refunds over $500 require reviewer approval.");
     expect(markup).toContain("Review action");
+    expect(markup).toContain("1 action requires a human decision");
     expect(markup).toContain('aria-label="Sort pending actions: oldest first"');
   });
 
@@ -82,6 +83,28 @@ describe("console presentation components", () => {
     expect(markup).toContain("No actions are waiting for human review.");
   });
 
+  it("labels an action without a reviewer decision and keeps its rule separate", () => {
+    const markup = renderToStaticMarkup(
+      <ActivityPage
+        activity={[{
+          id: "action-without-reviewer",
+          title: "Delete record",
+          detail: "A record was deleted.",
+          status: "approved",
+          actor: "No reviewer decision",
+          rule: "delete-record-blocked",
+          time: "Just now",
+        }]}
+        filter="all"
+        setFilter={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain("<strong>No reviewer decision</strong>");
+    expect(markup).toContain("Policy rule: delete-record-blocked");
+    expect(markup).not.toContain("<strong>Human decision</strong>");
+  });
+
   it("keeps a loading queue distinct from a loaded empty queue", () => {
     const markup = renderToStaticMarkup(
       <QueuePage
@@ -99,7 +122,52 @@ describe("console presentation components", () => {
 
     expect(markup).toContain("Loading pending actions.");
     expect(markup).toContain('aria-label="Sort pending actions: newest first"');
+    expect(markup).toContain('aria-busy="true"');
+    expect(markup).toContain('role="status"');
+    expect(markup.match(/class="queue-skeleton-card"/g)).toHaveLength(3);
     expect(markup).not.toContain("Queue is clear");
+    expect(markup).not.toContain("class=\"action-card\"");
+  });
+
+  it("shows loading indicators for metric counts, overview, activity, and audit data", () => {
+    const loadingCounts = { pending: null, approved: null, denied: null, auto: null, blocked: null };
+    const queueMarkup = renderToStaticMarkup(
+      <QueuePage
+        actions={[]}
+        counts={loadingCounts}
+        loaded={false}
+        sort="newest"
+        onSortChange={vi.fn()}
+        onGenerate={vi.fn()}
+        onReview={vi.fn()}
+        onStatusClick={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const overviewMarkup = renderToStaticMarkup(
+      <OverviewPage
+        counts={loadingCounts}
+        activity={[]}
+        loaded={false}
+        onNavigate={vi.fn()}
+        onStatusClick={vi.fn()}
+      />,
+    );
+    const activityMarkup = renderToStaticMarkup(
+      <ActivityPage activity={[]} loaded={false} filter="all" setFilter={vi.fn()} />,
+    );
+    const auditMarkup = renderToStaticMarkup(<AuditPage entries={[]} loaded={false} />);
+
+    expect(queueMarkup.match(/class="metric-skeleton"/g)).toHaveLength(5);
+    expect(queueMarkup).toContain('aria-label="Pending count loading"');
+    expect(overviewMarkup).toContain("Loading recent activity.");
+    expect(overviewMarkup).toContain('aria-busy="true"');
+    expect(overviewMarkup).toContain("overview-activity-loading");
+    expect(overviewMarkup).not.toContain("<p>Loading recent activity.</p>");
+    expect(activityMarkup).toContain("Loading activity history.");
+    expect(activityMarkup.match(/class="page-loading-row"/g)).toHaveLength(4);
+    expect(auditMarkup).toContain("Loading audit log.");
+    expect(auditMarkup.match(/class="page-loading-row"/g)).toHaveLength(5);
   });
 
   it("sorts and renders email, refund, and other-tool cards with distinct summaries", () => {

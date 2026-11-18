@@ -20,6 +20,28 @@ import {
 } from "./components/ConsolePages";
 import { ConsoleHeader } from "./components/ConsoleHeader";
 
+const pagePaths: Record<Page, string> = {
+  overview: "/",
+  queue: "/approval",
+  activity: "/history",
+  audit: "/log",
+};
+
+function pageForPath(pathname: string): Page | null {
+  switch (pathname.replace(/\/+$/, "") || "/") {
+    case "/":
+      return "overview";
+    case "/approval":
+      return "queue";
+    case "/history":
+      return "activity";
+    case "/log":
+      return "audit";
+    default:
+      return null;
+  }
+}
+
 function prefersReducedMotion() {
   return (
     typeof window.matchMedia === "function" &&
@@ -27,8 +49,8 @@ function prefersReducedMotion() {
   );
 }
 
-export default function App() {
-  const [page, setPage] = useState<Page>("queue");
+export default function App({ initialPage = "overview" }: { initialPage?: Page }) {
+  const [page, setPage] = useState<Page>(initialPage);
   const [mobileNav, setMobileNav] = useState(false);
   const { snapshot, snapshotError, loadSnapshot } = useConsoleSnapshot();
   const [selected, setSelected] = useState<Action | null>(null);
@@ -83,6 +105,16 @@ export default function App() {
       }
     });
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    function syncPageFromLocation() {
+      const currentPage = pageForPath(window.location.pathname);
+      if (currentPage) setPage(currentPage);
+    }
+
+    window.addEventListener("popstate", syncPageFromLocation);
+    return () => window.removeEventListener("popstate", syncPageFromLocation);
   }, []);
 
   useEffect(() => {
@@ -206,6 +238,10 @@ export default function App() {
   }
 
   function navigate(next: Page) {
+    const nextPath = pagePaths[next];
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, "", nextPath);
+    }
     setPage(next);
     setMobileNav(false);
     const behavior = prefersReducedMotion() ? "auto" : "smooth";
@@ -260,7 +296,6 @@ export default function App() {
         <div className="page page-transition" key={page} ref={pageContent}>
           <p id="console-announcement" role="status" aria-live="polite" tabIndex={-1}>{announcement}</p>
           {snapshotError && <p role="alert">{snapshotError} <button type="button" onClick={() => void loadSnapshot()}>Retry loading</button></p>}
-          {!snapshot && !snapshotError && <p role="status">Loading console data. Please wait.</p>}
           {page === "queue" && (
             <QueuePage
               actions={actions}
@@ -275,16 +310,23 @@ export default function App() {
             />
           )}
           {page === "overview" && (
-            <OverviewPage counts={counts} activity={activity} onNavigate={navigate} onStatusClick={showActivityStatus} />
+            <OverviewPage
+              counts={counts}
+              activity={activity}
+              loaded={snapshot !== null}
+              onNavigate={navigate}
+              onStatusClick={showActivityStatus}
+            />
           )}
           {page === "activity" && (
             <ActivityPage
               activity={activity}
+              loaded={snapshot !== null}
               filter={activityFilter}
               setFilter={setActivityFilter}
             />
           )}
-          {page === "audit" && <AuditPage entries={snapshot?.audit ?? []} />}
+          {page === "audit" && <AuditPage entries={snapshot?.audit ?? []} loaded={snapshot !== null} />}
         </div>
       </main>
 

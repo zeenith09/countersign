@@ -52,11 +52,15 @@ export function QueuePage({
         <Metric label="Auto-allowed" value={counts.auto} tone="blue" onClick={() => onStatusClick("auto_allowed")} />
         <Metric label="Blocked" value={counts.blocked} tone="slate" onClick={() => onStatusClick("blocked")} />
       </section>
-      <section className="queue-section" aria-labelledby="pending-heading">
+      <section className="queue-section" aria-labelledby="pending-heading" aria-busy={!loaded}>
         <div className="section-heading" data-reveal>
           <div>
             <h2 id="pending-heading">Pending actions</h2>
-            <p>{loaded ? `${actions.length} actions require a human decision` : "Loading pending actions."}</p>
+            <p role={!loaded ? "status" : undefined}>
+              {loaded
+                ? `${actions.length} ${actions.length === 1 ? "action requires" : "actions require"} a human decision`
+                : "Loading pending actions."}
+            </p>
           </div>
           <button
             className="sort-label"
@@ -68,7 +72,25 @@ export function QueuePage({
             <span aria-hidden="true">{sort === "oldest" ? "↓" : "↑"}</span>
           </button>
         </div>
-        {!loaded ? null : actions.length === 0 ? (
+        {!loaded ? (
+          <div className="queue-skeleton-list" aria-hidden="true">
+            {[0, 1, 2].map((item) => (
+              <div className="queue-skeleton-card" key={item}>
+                <span className="queue-skeleton-icon" />
+                <div className="queue-skeleton-content">
+                  <span className="queue-skeleton-tool" />
+                  <span className="queue-skeleton-title" />
+                  <span className="queue-skeleton-summary" />
+                  <div className="queue-skeleton-meta">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : actions.length === 0 ? (
           <div className="empty" data-reveal>
             <div className="empty-icon">
               <Icon name="check" />
@@ -157,11 +179,13 @@ export function QueuePage({
 export function OverviewPage({
   counts,
   activity,
+  loaded = true,
   onNavigate,
   onStatusClick,
 }: {
   counts: ConsoleCounts;
   activity: ConsoleActivityItem[];
+  loaded?: boolean;
   onNavigate: (page: ConsolePage) => void;
   onStatusClick: (status: ConsoleStatus) => void;
 }) {
@@ -207,7 +231,13 @@ export function OverviewPage({
             </div>
             <button onClick={() => onNavigate("activity")}>View all</button>
           </div>
-          <ActivityList items={activity.slice(0, 5)} />
+          {!loaded ? (
+            <PageLoadingIndicator message="Loading recent activity." kind="activity" rows={3} compact />
+          ) : activity.length === 0 ? (
+            <p className="page-empty-state">No recent activity.</p>
+          ) : (
+            <ActivityList items={activity.slice(0, 5)} />
+          )}
         </section>
       </div>
     </>
@@ -216,10 +246,12 @@ export function OverviewPage({
 
 export function ActivityPage({
   activity,
+  loaded = true,
   filter,
   setFilter,
 }: {
   activity: ConsoleActivityItem[];
+  loaded?: boolean;
   filter: "all" | ConsoleStatus;
   setFilter: (filter: "all" | ConsoleStatus) => void;
 }) {
@@ -255,14 +287,20 @@ export function ActivityPage({
           </button>
         ))}
       </div>
-      <section className="activity-card">
+      <section className="activity-card" aria-busy={!loaded}>
         <div className="activity-table-head">
           <span>Action</span>
           <span>Outcome</span>
           <span>Decision source</span>
           <span>Time</span>
         </div>
-        <ActivityList items={filtered} detailed />
+        {!loaded ? (
+          <PageLoadingIndicator message="Loading activity history." kind="activity" rows={4} />
+        ) : filtered.length === 0 ? (
+          <p className="page-empty-state">No activity matches this filter.</p>
+        ) : (
+          <ActivityList items={filtered} detailed />
+        )}
       </section>
     </>
   );
@@ -286,13 +324,16 @@ function ActivityList({ items, detailed = false }: { items: ConsoleActivityItem[
           <div className="activity-outcome"><Badge status={item.status} /></div>
           <div className="activity-actor">
             <strong>
-              {item.status === "pending"
-                ? "Awaiting human decision"
-                : item.status === "approved" || item.status === "denied"
-                  ? "Human decision"
-                  : "Policy outcome"}
+              {item.actor === "No reviewer decision"
+                ? "No reviewer decision"
+                : item.status === "pending"
+                  ? "Awaiting human decision"
+                  : item.status === "approved" || item.status === "denied"
+                    ? "Human decision"
+                    : "Policy outcome"}
             </strong>
-            <span>{item.actor}</span>
+            {item.actor !== "No reviewer decision" && <span>{item.actor}</span>}
+            <span>Policy rule: {item.rule ?? "Unknown (not recorded)"}</span>
           </div>
           <time>{item.time}</time>
         </article>
@@ -301,7 +342,13 @@ function ActivityList({ items, detailed = false }: { items: ConsoleActivityItem[
   );
 }
 
-export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
+export function AuditPage({
+  entries,
+  loaded = true,
+}: {
+  entries: ConsoleAuditEntry[];
+  loaded?: boolean;
+}) {
   return (
     <>
       <section className="page-heading" data-reveal>
@@ -315,7 +362,7 @@ export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
           Chain not verified in this view
         </span>
       </section>
-      <section className="audit-card">
+      <section className="audit-card" aria-busy={!loaded}>
         <div className="audit-head" data-reveal>
           <span>Sequence</span>
           <span>Event</span>
@@ -323,7 +370,11 @@ export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
           <span>Record hash</span>
           <span>Timestamp</span>
         </div>
-        {entries.map((item) => (
+        {!loaded ? (
+          <PageLoadingIndicator message="Loading audit log." kind="audit" rows={5} />
+        ) : entries.length === 0 ? (
+          <p className="page-empty-state">No audit entries recorded.</p>
+        ) : entries.map((item) => (
           <div className="audit-row" data-reveal key={item.id}>
             <code>#{item.sequence}</code>
             <div><strong>{item.event}</strong></div>
@@ -334,5 +385,37 @@ export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
         ))}
       </section>
     </>
+  );
+}
+
+function PageLoadingIndicator({
+  message,
+  kind,
+  rows,
+  compact = false,
+}: {
+  message: string;
+  kind: "activity" | "audit";
+  rows: number;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`page-loading ${kind}-loading${compact ? " overview-activity-loading" : ""}`}
+      role="status"
+      aria-busy="true"
+      aria-label={compact ? message : undefined}
+    >
+      {!compact && <p>{message}</p>}
+      <div className="page-loading-rows" aria-hidden="true">
+        {Array.from({ length: rows }, (_, row) => (
+          <div className="page-loading-row" key={row}>
+            {Array.from({ length: kind === "audit" ? 5 : 3 }, (_, cell) => (
+              <span className={`page-loading-cell cell-${cell + 1}`} key={cell} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

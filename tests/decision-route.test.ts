@@ -58,11 +58,16 @@ describe("decision route", () => {
     expect(decideAction).not.toHaveBeenCalled();
   });
 
-  it.each([undefined, "", " \t "])("rejects a missing or blank reason without calling the transaction or a tool", async (reason) => {
+  it.each([
+    ["missing reviewer", { outcome: "approved", reason: "reason" }, "reviewer: Invalid input: expected string, received undefined"],
+    ["empty reason", { reviewer: "reviewer", outcome: "approved", reason: "" }, "reason: Too small: expected string to have >=1 characters"],
+    ["whitespace-only reason", { reviewer: "reviewer", outcome: "approved", reason: " \t " }, "reason: Too small: expected string to have >=1 characters"],
+    ["invalid outcome", { reviewer: "reviewer", outcome: "accept", reason: "reason" }, "outcome: Invalid option: expected one of \"approved\"|\"denied\""],
+  ] as const)("rejects %s without calling the transaction or a tool", async (_label, body, message) => {
     const tool = vi.spyOn(toolRegistry, "issue_refund");
-    const response = await POST(request({ reviewer: "reviewer", outcome: "approved", reason }), { params });
+    const response = await POST(request(body), { params });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ message: expect.stringContaining("reason") });
+    expect(await response.json()).toEqual({ message });
     expect(decideAction).not.toHaveBeenCalled();
     expect(tool).not.toHaveBeenCalled();
   });

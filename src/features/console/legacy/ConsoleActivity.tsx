@@ -94,12 +94,12 @@ export function ConsoleActivity({ pendingCount, children }: { pendingCount: numb
                 </div>
                 <div className="activity-title">
                   <strong>{action.tool}</strong>
-                  <span>{action.policyRuleMatched ?? "Policy rule not recorded"}</span>
+                  <span>{action.policyRuleMatched ?? "Unknown (not recorded)"}</span>
                 </div>
                 <div className="activity-outcome"><span className={`badge badge-${action.status}`}>{labels[action.status]}</span></div>
                 <div className="activity-actor">
-                  <strong>{action.decision ? "Human decision" : "Policy outcome"}</strong>
-                  <span>{action.decision?.reviewer ?? action.policyRuleMatched ?? "Rule not recorded"}</span>
+                  <strong>{action.decision?.reviewer.trim() ? "Human decision" : "No reviewer decision"}</strong>
+                  <span>{action.decision?.reviewer.trim() || "Unknown (not recorded)"}</span>
                 </div>
                 <time dateTime={action.createdAt}>Submitted {new Date(action.createdAt).toLocaleString()}</time>
               </li>
