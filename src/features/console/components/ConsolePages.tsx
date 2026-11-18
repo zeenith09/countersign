@@ -34,7 +34,7 @@ export function QueuePage({
   const sortedActions = sortPendingActions(actions, sort);
   return (
     <>
-      <section className="page-heading">
+      <section className="page-heading" data-reveal>
         <div>
           <p className="eyebrow">Human review</p>
           <h1>Approval queue</h1>
@@ -45,7 +45,7 @@ export function QueuePage({
           Generate incoming action
         </button>
       </section>
-      <section className="metrics" aria-label="Action counts">
+      <section className="metrics" aria-label="Action counts" data-reveal>
         <Metric label="Pending" value={counts.pending} tone="amber" onClick={() => onStatusClick("pending")} />
         <Metric label="Human-approved" value={counts.approved} tone="green" onClick={() => onStatusClick("approved")} />
         <Metric label="Human-denied" value={counts.denied} tone="red" onClick={() => onStatusClick("denied")} />
@@ -53,7 +53,7 @@ export function QueuePage({
         <Metric label="Blocked" value={counts.blocked} tone="slate" onClick={() => onStatusClick("blocked")} />
       </section>
       <section className="queue-section" aria-labelledby="pending-heading">
-        <div className="section-heading">
+        <div className="section-heading" data-reveal>
           <div>
             <h2 id="pending-heading">Pending actions</h2>
             <p>{loaded ? `${actions.length} actions require a human decision` : "Loading pending actions."}</p>
@@ -69,7 +69,7 @@ export function QueuePage({
           </button>
         </div>
         {!loaded ? null : actions.length === 0 ? (
-          <div className="empty">
+          <div className="empty" data-reveal>
             <div className="empty-icon">
               <Icon name="check" />
             </div>
@@ -79,7 +79,7 @@ export function QueuePage({
         ) : (
           <div className="queue-list">
             {sortedActions.map((action) => (
-              <article className="action-card" key={action.id} onClick={() => onReview(action)}>
+              <article className="action-card" data-reveal key={action.id} onClick={() => onReview(action)}>
                 <div className="card-main">
                   <div className="tool-icon">
                     <Icon
@@ -137,7 +137,7 @@ export function QueuePage({
           </div>
         )}
       </section>
-      <section className="policy-receipt">
+      <section className="policy-receipt" data-reveal>
         <div className="receipt-icon"><Icon name="shield" /></div>
         <div>
           <h2>Policy outcomes stay out of this queue</h2>
@@ -167,7 +167,7 @@ export function OverviewPage({
 }) {
   return (
     <>
-      <section className="page-heading">
+      <section className="page-heading" data-reveal>
         <div>
           <p className="eyebrow">Governance workspace</p>
           <h1>Overview</h1>
@@ -177,7 +177,7 @@ export function OverviewPage({
           Open approval queue <Icon name="arrow" size={16} />
         </button>
       </section>
-      <section className="metrics overview-metrics">
+      <section className="metrics overview-metrics" data-reveal>
         <Metric label="Pending" value={counts.pending} tone="amber" onClick={() => onStatusClick("pending")} />
         <Metric label="Human-approved" value={counts.approved} tone="green" onClick={() => onStatusClick("approved")} />
         <Metric label="Human-denied" value={counts.denied} tone="red" onClick={() => onStatusClick("denied")} />
@@ -185,7 +185,7 @@ export function OverviewPage({
         <Metric label="Blocked" value={counts.blocked} tone="slate" onClick={() => onStatusClick("blocked")} />
       </section>
       <div className="overview-grid">
-        <section className="overview-hero">
+        <section className="overview-hero" data-reveal>
           <div className="hero-grid" />
           <div className="hero-content">
             <span className="hero-kicker"><i /> Live governance posture</span>
@@ -199,7 +199,7 @@ export function OverviewPage({
             </button>
           </div>
         </section>
-        <section className="recent-panel">
+        <section className="recent-panel" data-reveal>
           <div className="section-heading">
             <div>
               <h2>Recent activity</h2>
@@ -234,14 +234,14 @@ export function ActivityPage({
   ];
   return (
     <>
-      <section className="page-heading">
+      <section className="page-heading" data-reveal>
         <div>
           <p className="eyebrow">Recorded actions</p>
           <h1>Activity history</h1>
           <p>Human decisions and policy outcomes are recorded separately. Showing up to 100 recent actions by submission time.</p>
         </div>
       </section>
-      <div className="filter-tabs" role="group" aria-label="Filter activity">
+      <div className="filter-tabs" role="group" aria-label="Filter activity" data-reveal>
         {filters.map((item) => (
           <button
             key={item.key}
@@ -272,7 +272,7 @@ function ActivityList({ items, detailed = false }: { items: ConsoleActivityItem[
   return (
     <div className={`activity-list ${detailed ? "detailed" : ""}`}>
       {items.map((item) => (
-        <article className="activity-item" key={item.id}>
+        <article className="activity-item" data-reveal key={item.id}>
           <div className={`activity-icon ${item.status}`}>
             <Icon
               name={item.status === "pending" ? "queue" : item.status === "approved" || item.status === "auto_allowed" ? "check" : "x"}
@@ -304,7 +304,7 @@ function ActivityList({ items, detailed = false }: { items: ConsoleActivityItem[
 export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
   return (
     <>
-      <section className="page-heading">
+      <section className="page-heading" data-reveal>
         <div>
           <p className="eyebrow">Immutable record</p>
           <h1>Audit log</h1>
@@ -316,7 +316,7 @@ export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
         </span>
       </section>
       <section className="audit-card">
-        <div className="audit-head">
+        <div className="audit-head" data-reveal>
           <span>Sequence</span>
           <span>Event</span>
           <span>Principal</span>
@@ -324,7 +324,7 @@ export function AuditPage({ entries }: { entries: ConsoleAuditEntry[] }) {
           <span>Timestamp</span>
         </div>
         {entries.map((item) => (
-          <div className="audit-row" key={item.id}>
+          <div className="audit-row" data-reveal key={item.id}>
             <code>#{item.sequence}</code>
             <div><strong>{item.event}</strong></div>
             <span>{item.principal}</span>
