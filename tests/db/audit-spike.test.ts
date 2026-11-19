@@ -25,7 +25,7 @@ const submissions = [
       agentId: "audit-spike-agent",
       agentReasoning: "Refund the customer at the limit.",
       tool: "issue_refund",
-      parameters: { amount: 500, currency: "USD", orderId: "AUDIT-500" },
+      parameters: { amount: 500, orderId: "ORDER-500" },
     },
     httpStatus: 201,
     outcome: "allow",
@@ -38,7 +38,7 @@ const submissions = [
       agentId: "audit-spike-agent",
       agentReasoning: "Request review for a refund above the limit.",
       tool: "issue_refund",
-      parameters: { amount: 501, currency: "USD", orderId: "AUDIT-501" },
+      parameters: { amount: 501, orderId: "ORDER-501" },
     },
     httpStatus: 201,
     outcome: "needs_approval",
@@ -46,7 +46,7 @@ const submissions = [
     ruleId: "refund-over-500",
   },
   {
-    name: "internal email with untouched submitted parameters",
+    name: "internal email with valid submitted parameters",
     action: {
       agentId: "audit-spike-agent",
       agentReasoning: "Send the prepared internal message.",
@@ -55,7 +55,6 @@ const submissions = [
         to: "reviewer@countersign.example",
         subject: "Audit test",
         body: "Fictional test message.",
-        recipient_domain: "caller-supplied.example",
       },
     },
     httpStatus: 201,
@@ -69,7 +68,7 @@ const submissions = [
       agentId: "audit-spike-agent",
       agentReasoning: "Request deletion of a fictional record.",
       tool: "delete_record",
-      parameters: { recordId: "AUDIT-DELETE" },
+      parameters: { recordId: "RECORD-700" },
     },
     httpStatus: 403,
     outcome: "block",
@@ -90,17 +89,17 @@ const submissions = [
     ruleId: "unsupported_tool",
   },
   {
-    name: "supported action with no rule match",
+    name: "invalid refund shape",
     action: {
       agentId: "audit-spike-agent",
-      agentReasoning: "A refund missing its amount must be reviewed.",
+      agentReasoning: "A refund missing its amount is invalid.",
       tool: "issue_refund",
-      parameters: { currency: "USD", orderId: "AUDIT-NO-RULE" },
+      parameters: { orderId: "ORDER-700" },
     },
-    httpStatus: 201,
-    outcome: "needs_approval",
-    status: "pending",
-    ruleId: "no_rule_match",
+    httpStatus: 403,
+    outcome: "block",
+    status: "blocked",
+    ruleId: "invalid_parameters",
   },
 ] as const;
 
@@ -284,7 +283,7 @@ describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1")("hosted Postgres action audit s
       agentId: "audit-spike-agent",
       agentReasoning: `Concurrent audit submission ${index}.`,
       tool: "issue_refund",
-      parameters: { amount: 10 + index, currency: "USD", orderId: `AUDIT-CONCURRENT-${index}` },
+      parameters: { amount: 10 + index, orderId: `ORDER-${index}` },
     }));
 
     const responses = await Promise.all(

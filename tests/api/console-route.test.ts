@@ -229,8 +229,9 @@ describe("GET /api/console", () => {
     const unknownRule = { ...pendingAction, id: "unknown-rule", policyRuleMatched: "future-rule" };
     const noRuleMatch = { ...pendingAction, id: "no-rule", policyRuleMatched: "no_rule_match" };
     const unsupportedTool = { ...pendingAction, id: "unsupported", policyRuleMatched: "unsupported_tool" };
+    const invalidParameters = { ...pendingAction, id: "invalid-parameters", policyRuleMatched: "invalid_parameters" };
     actionFindMany
-      .mockResolvedValueOnce([missingRule, unknownRule, noRuleMatch, unsupportedTool])
+      .mockResolvedValueOnce([missingRule, unknownRule, noRuleMatch, unsupportedTool, invalidParameters])
       .mockResolvedValueOnce([]);
 
     const response = await GET();
@@ -252,6 +253,11 @@ describe("GET /api/console", () => {
         id: "unsupported",
         rule: "unsupported_tool",
         ruleDescription: "The submitted tool is not registered and is blocked.",
+      },
+      {
+        id: "invalid-parameters",
+        rule: "invalid_parameters",
+        ruleDescription: "The parameters do not match the tool requirements, so the action is blocked.",
       },
     ]);
   });

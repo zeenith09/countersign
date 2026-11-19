@@ -15,7 +15,7 @@ const scenarios = [
 		payload: {
 			agentId: "demo-agent",
 			tool: "issue_refund",
-			parameters: { orderId: "ORDER-1005", amount: 750, currency: "USD" },
+			parameters: { orderId: "ORDER-1005", amount: 750 },
 			agentReasoning: "Customer requested a refund.",
 		},
 	},

@@ -50,8 +50,8 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
 
   it("stores each submitted action with its original parameters and matching audit outcome", async () => {
     const submissions = [
-      { tool: "issue_refund", parameters: { amount: 500, nested: { unchanged: true } }, status: 201, outcome: "allow", rule: "other-refunds-allowed", actionStatus: "auto_allowed" },
-      { tool: "issue_refund", parameters: { amount: 501, nested: { unchanged: true } }, status: 201, outcome: "needs_approval", rule: "refund-over-500", actionStatus: "pending" },
+      { tool: "issue_refund", parameters: { amount: 500, orderId: "ORDER-1005" }, status: 201, outcome: "allow", rule: "other-refunds-allowed", actionStatus: "auto_allowed" },
+      { tool: "issue_refund", parameters: { amount: 501, orderId: "ORDER-1005" }, status: 201, outcome: "needs_approval", rule: "refund-over-500", actionStatus: "pending" },
       { tool: "unsupported_test_tool", parameters: { nested: { unchanged: true } }, status: 403, outcome: "block", rule: "unsupported_tool", actionStatus: "blocked" },
     ] as const;
     const refund = vi.spyOn(toolRegistry, "issue_refund").mockReturnValue({ mocked: true, tool: "issue_refund" });
@@ -129,14 +129,14 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
   }, testTimeout);
 
   it("stores edited approval parameters separately and keeps the audit chain valid", async () => {
-    const original = { amount: 750, currency: "USD", orderId: "ORDER-1" };
+    const original = { amount: 750, orderId: "ORDER-1" };
     const response = await handleActionSubmission(new Request("http://localhost/api/actions", {
       method: "POST",
       body: JSON.stringify({ agentId: "test", agentReasoning: "review", tool: "issue_refund", parameters: original }),
     }), () => client);
     expect(response.status).toBe(201);
     const { actionId } = await response.json();
-    const edited = { amount: 500, currency: "USD", orderId: "ORDER-1" };
+    const edited = { amount: 500, orderId: "ORDER-1" };
     const result = await decideAction(actionId, "reviewer", "approved", "reviewed", client, edited);
     expect(result).toMatchObject({ kind: "ok", outcome: "approved", parameters: edited });
     expect((await client.action.findUniqueOrThrow({ where: { id: actionId } })).parameters).toEqual(original);
@@ -151,7 +151,7 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
   it("rejects invalid edits without changing action, decision, or audit rows", async () => {
     const action = await pendingAction();
     const result = await decideAction(action.id, "reviewer", "approved", "reason", client,
-      { amount: "invalid", currency: "USD", orderId: "ORDER-1" });
+      { amount: "invalid", orderId: "ORDER-1" });
     expect(result.kind).toBe("invalid_edit");
     const stored = await client.action.findUniqueOrThrow({ where: { id: action.id } });
     expect(stored.status).toBe("pending");
@@ -177,7 +177,7 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
   it("rejects edits on denials without writing a decision", async () => {
     const action = await pendingAction();
     const result = await decideAction(action.id, "reviewer", "denied", "reason", client,
-      { amount: 25, currency: "USD", orderId: "ORDER-1" });
+      { amount: 25, orderId: "ORDER-1" });
     expect(result.kind).toBe("invalid_edit");
     expect((await client.action.findUniqueOrThrow({ where: { id: action.id } })).status).toBe("pending");
     expect(await client.decision.count()).toBe(0);
@@ -186,8 +186,8 @@ describe.skipIf(readEnv("RUN_DECISION_DB_TESTS") !== "1")("decision integration 
 
   it("accepts only one concurrent reviewer edit and leaves original parameters unchanged", async () => {
     const action = await pendingAction();
-    const first = { amount: 25, currency: "USD", orderId: "ORDER-1" };
-    const second = { amount: 30, currency: "USD", orderId: "ORDER-2" };
+    const first = { amount: 25, orderId: "ORDER-1" };
+    const second = { amount: 30, orderId: "ORDER-2" };
     const results = await Promise.all([
       decideAction(action.id, "reviewer one", "approved", "reason", client, first),
       decideAction(action.id, "reviewer two", "approved", "reason", client, second),

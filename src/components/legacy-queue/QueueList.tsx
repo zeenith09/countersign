@@ -30,6 +30,7 @@ export type DecisionState = {
 const builtInRuleDescriptions: Record<string, string> = {
 	no_rule_match: "No policy rule matched; reviewer approval is required.",
 	unsupported_tool: "The submitted tool is not registered and is blocked.",
+	invalid_parameters: "The parameters do not match the tool requirements, so the action is blocked.",
 };
 
 function MatchedRule({ action }: { action: QueueAction }) {

@@ -8,19 +8,21 @@ This contract describes the intended handoff; gaps in the current code are liste
 Process one proposed action, keyed by its action ID. The proposal contains an
 agent ID, registered tool name, original JSON parameters, and agent reasoning.
 For a pending action, the reviewer supplies a name, approve/deny outcome, and
-non-empty reason. An approval may also supply validated edited parameters.
+non-empty reason. Requests containing `editedParameters` are rejected.
 
 ## Constraints and limits
 
-- The gateway validates input, rejects unsupported tools, and applies the
-  deterministic, first-match policy. An unmatched supported action requires
-  approval. Original parameters are retained; edits belong to the decision.
+- The gateway validates each supported tool's strict parameter schema, rejects
+  invalid or unsupported tools as blocked, and applies the deterministic,
+  first-match policy to valid parameters. An unmatched supported action
+  requires approval. Original parameters are retained.
 - Only a pending action can be decided. One READ COMMITTED interactive
   transaction conditionally updates it, inserts the decision, and appends the
   audit entry under a transaction-level advisory lock taken last.
 - Tools are mocked. Only the winning approval request executes a tool, after
-  commit, using edited parameters if present. Denial, conflict, and busy do not
-  execute. Auto-allowed proposals execute after their submission commits.
+  commit, using the stored parameters after a second schema validation. Denial,
+  conflict, and busy do not execute. Auto-allowed proposals execute after their
+  submission commits.
 - Reviewer names are self-asserted, not authenticated. There is no queue,
   outbox, or retry workflow: a crash between commit and execution can leave an
   approved action unexecuted.
@@ -84,6 +86,6 @@ only for an approved winner. The database stores the authoritative state.
    it. The demo agent stops on failure rather than re-reading that action; a
    fresh submission is not an idempotent retry of the original.
 
-The current UI does not offer edited parameters; the endpoint supports them for
-approved decisions. The contract does not claim that a log line is durable
-execution evidence.
+Neither the UI nor the endpoint supports edited parameters. The decision API
+rejects them. The contract does not claim that a log line is durable execution
+evidence.

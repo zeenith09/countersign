@@ -24,15 +24,24 @@ const baseAction = {
   agentId: "test-agent",
   agentReasoning: "Test reason",
   tool: "issue_refund",
-  parameters: { amount: 500 },
+  parameters: { amount: 500, orderId: "ORDER-1005" },
 };
 
-function request(body: unknown): Request {
+function request(body: unknown, headers: HeadersInit = {}): Request {
   return new Request("http://localhost/api/actions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...Object.fromEntries(new Headers(headers)) },
     body: JSON.stringify(body),
   });
+}
+
+function streamedRequest(stream: ReadableStream<Uint8Array>, headers: HeadersInit = {}): Request {
+  return new Request("http://localhost/api/actions", {
+    method: "POST",
+    headers,
+    body: stream,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
 }
 
 function seedRequest(action: typeof seedActions[number], databaseUrl: string): Request {
@@ -49,6 +58,7 @@ function seedRequest(action: typeof seedActions[number], databaseUrl: string): R
 describe("action submission gateway", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv("APP_ORIGIN", "https://app.example");
     auditFindFirst.mockResolvedValue(null);
     auditCreate.mockResolvedValue({});
     queryRaw.mockImplementation((strings: TemplateStringsArray, value: unknown) =>
@@ -83,18 +93,108 @@ describe("action submission gateway", () => {
     }));
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ message: "Invalid action submission." });
+    expect(await response.json()).toEqual({ message: "Invalid JSON" });
     expect(transaction).not.toHaveBeenCalled();
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
   });
 
-  it("rethrows non-SyntaxError failures while reading the request body", async () => {
-    const error = new Error("body read failed");
-    const malformedRequest = new Request("http://localhost/api/actions", { method: "POST" });
-    vi.spyOn(malformedRequest, "json").mockRejectedValue(error);
+  it("rejects a declared oversized body before reading or touching the database", async () => {
+    const body = new Request("http://localhost/api/actions", {
+      method: "POST",
+      headers: { "content-length": "4097" },
+      body: "{}",
+    });
+    const response = await POST(body);
 
-    await expect(POST(malformedRequest)).rejects.toBe(error);
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ message: "Request too large" });
+    expect(body.bodyUsed).toBe(false);
     expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("rejects a chunked oversized body without Content-Length before touching the database", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(3_000));
+        controller.enqueue(new Uint8Array(1_097));
+        controller.close();
+      },
+    });
+    const body = streamedRequest(stream, { "content-type": "application/json" });
+
+    expect(body.headers.has("content-length")).toBe(false);
+    const response = await POST(body);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ message: "Request too large" });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["different host", "https://other.example"],
+    ["different port", "https://app.example:444"],
+    ["different scheme", "http://app.example"],
+    ["opaque null origin", "null"],
+    ["lookalike host", "https://app.example.evil.com"],
+  ])("rejects a %s Origin before the database or mock tool", async (_label, origin) => {
+    const response = await POST(request(baseAction, { origin }));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      message: "Cross-origin requests are not allowed.",
+    });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("rejects a cross-origin oversized body before reading it", async () => {
+    const body = streamedRequest(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(4_097));
+          controller.close();
+        },
+      }),
+      { "content-length": "4097", origin: "https://app.example.evil.com" },
+    );
+    const response = await POST(body);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      message: "Cross-origin requests are not allowed.",
+    });
+    expect(body.bodyUsed).toBe(false);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the configured origin", "https://app.example"],
+    ["the development/test localhost origin", "http://localhost:3000"],
+  ])("accepts %s", async (_label, origin) => {
+    if (origin === "https://app.example") vi.stubEnv("NODE_ENV", "production");
+    const response = await POST(request(baseAction, { origin }));
+
+    expect(response.status).toBe(201);
+    expect(transaction).toHaveBeenCalledOnce();
+  });
+
+  it("does not allow the localhost exception in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const response = await POST(request(baseAction, { origin: "http://localhost:3000" }));
+
+    expect(response.status).toBe(403);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+  });
+
+  it("accepts a request without an Origin header", async () => {
+    const response = await POST(request(baseAction));
+
+    expect(response.status).toBe(201);
+    expect(transaction).toHaveBeenCalledOnce();
   });
 
   it("returns the specified validation message for oversized agent reasoning", async () => {
@@ -187,16 +287,14 @@ describe("action submission gateway", () => {
     }));
   });
 
-  it("rejects oversized parameters with a readable limit message and stores nothing", async () => {
+  it("rejects a body over the request cap before field validation or storage", async () => {
     const response = await POST(request({
       ...baseAction,
       parameters: { comment: "x".repeat(16_001) },
     }));
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      message: expect.stringMatching(/parameters.*16,000/i),
-    });
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ message: "Request too large" });
     expect(create).not.toHaveBeenCalled();
     expect(transaction).not.toHaveBeenCalled();
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
@@ -245,30 +343,75 @@ describe("action submission gateway", () => {
   });
 
   it.each([
-    ["high refund", { amount: 501 }, "refund-over-500"],
-    ["missing amount", {}, "no_rule_match"],
-    ["string amount", { amount: "5000" }, "no_rule_match"],
-  ])("stores %s for approval without calling a tool", async (_label, parameters, ruleId) => {
+    ["high refund", { amount: 501, orderId: "ORDER-1" }, "needs_approval", "refund-over-500", "pending", 201],
+    ["missing amount", { orderId: "ORDER-1" }, "block", "invalid_parameters", "blocked", 403],
+    ["string amount", { amount: "5000", orderId: "ORDER-1" }, "block", "invalid_parameters", "blocked", 403],
+  ] as const)("stores %s with its matching validation outcome", async (_label, parameters, outcome, ruleId, status, responseStatus) => {
     const response = await POST(request({ ...baseAction, parameters }));
 
-    expect(response.status).toBe(201);
-    expect(await response.json()).toEqual({
+    expect(response.status).toBe(responseStatus);
+    expect(await response.json()).toMatchObject({
       actionId,
-      outcome: "needs_approval",
+      outcome,
       ruleId,
-      status: "pending",
+      status,
     });
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ parameters, status: "pending", policyRuleMatched: ruleId }),
+      data: expect.objectContaining({ parameters, status, policyRuleMatched: ruleId }),
     }));
     expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["policy block", "delete_record", "delete-record-blocked"],
-    ["unsupported tool", "unsupported_tool_name", "unsupported_tool"],
-  ])("stores and rejects a %s without calling a tool", async (_label, tool, ruleId) => {
-    const response = await POST(request({ ...baseAction, tool }));
+    ["refund unknown key", "issue_refund", {
+      amount: 500, orderId: "ORDER-1", unexpected: "kept exactly",
+    }],
+    ["email recipient_domain", "send_email", {
+      to: "user@example.com", subject: "Subject", body: "Body", recipient_domain: "example.com",
+    }],
+    ["malformed record id", "delete_record", { recordId: "record-1" }],
+  ] as const)("stores %s as blocked and audits the original values without running a tool", async (_label, tool, parameters) => {
+    const response = await POST(request({ ...baseAction, tool, parameters }));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      actionId,
+      outcome: "block",
+      ruleId: "invalid_parameters",
+      status: "blocked",
+      message: "The parameters do not match the tool requirements, so the action is blocked.",
+    });
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tool,
+        parameters,
+        status: "blocked",
+        policyRuleMatched: "invalid_parameters",
+      }),
+    }));
+    expect(auditCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        eventType: "action_submitted",
+        payload: expect.objectContaining({
+          action_id: actionId,
+          tool,
+          parameters,
+          outcome: "block",
+          status: "blocked",
+          policy_rule_matched: "invalid_parameters",
+        }),
+      }),
+    }));
+    expect(toolRegistry.issue_refund).not.toHaveBeenCalled();
+    expect(toolRegistry.send_email).not.toHaveBeenCalled();
+    expect(toolRegistry.delete_record).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["policy block", "delete_record", { recordId: "RECORD-1006" }, "delete-record-blocked"],
+    ["unsupported tool", "unsupported_tool_name", baseAction.parameters, "unsupported_tool"],
+  ] as const)("stores and rejects a %s without calling a tool", async (_label, tool, parameters, ruleId) => {
+    const response = await POST(request({ ...baseAction, tool, parameters }));
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -295,7 +438,7 @@ describe("action submission gateway", () => {
     ["lookalike", "user@countersign.example.evil.com", "needs_approval", "other-emails-need-approval", "pending"],
     ["malformed", "bad(@countersign.example", "needs_approval", "other-emails-need-approval", "pending"],
   ])("routes %s email correctly", async (_label, to, outcome, ruleId, status) => {
-    const parameters = { to, recipient_domain: "caller-supplied.example", nested: { untouched: true } };
+    const parameters = { to, subject: "Test subject", body: "Test body" };
     const response = await POST(request({ ...baseAction, tool: "send_email", parameters }));
     const body = await response.json();
 

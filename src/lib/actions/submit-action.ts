@@ -11,7 +11,14 @@ import { toolRegistry } from "../tools";
 import {
   actionParametersSchema,
   MAX_AGENT_REASONING_LENGTH,
+  validToolParameters,
 } from "../tools/parameters";
+import { executeMockedTool } from "./execute-mocked-tool";
+import {
+  HttpError,
+  MAX_REQUEST_BODY_BYTES,
+  readJsonLimited,
+} from "../http/read-json-limited";
 
 const submissionSchema = z.object({
   id: z.uuid().optional(),
@@ -33,11 +40,9 @@ export async function handleActionSubmission(
 ): Promise<Response> {
   let body: unknown;
   try {
-    body = await request.json();
+    body = await readJsonLimited(request, MAX_REQUEST_BODY_BYTES);
   } catch (error) {
-    if (error instanceof SyntaxError) {
-      return Response.json({ message: "Invalid action submission." }, { status: 400 });
-    }
+    if (error instanceof HttpError) return Response.json({ message: error.message }, { status: error.status });
     throw error;
   }
 
@@ -58,9 +63,12 @@ export async function handleActionSubmission(
     return Response.json({ message: "Seed database does not match the gateway database." }, { status: 400 });
   }
   const supported = isSupportedTool(action.tool);
-  const decision = supported
-    ? evaluatePolicy(policy, { tool: action.tool, parameters: action.parameters })
-    : { outcome: "block" as const, rule_id: "unsupported_tool" };
+  const toolParametersValid = supported && validToolParameters(action.tool, action.parameters);
+  const decision = !supported
+    ? { outcome: "block" as const, rule_id: "unsupported_tool" }
+    : !toolParametersValid
+      ? { outcome: "block" as const, rule_id: "invalid_parameters" }
+      : evaluatePolicy(policy, { tool: action.tool, parameters: action.parameters });
 
   let stored: { id: string; status: "auto_allowed" | "pending" | "blocked" };
   try {
@@ -88,7 +96,11 @@ export async function handleActionSubmission(
   if (decision.outcome === "block") {
     return Response.json({
       ...result,
-      message: supported ? "Action blocked by policy." : "Unsupported tool.",
+      message: !supported
+        ? "Unsupported tool."
+        : decision.rule_id === "invalid_parameters"
+          ? "The parameters do not match the tool requirements, so the action is blocked."
+          : "Action blocked by policy.",
     }, { status: 403 });
   }
   if (decision.outcome === "needs_approval") {
@@ -99,8 +111,16 @@ export async function handleActionSubmission(
   }
 
   try {
-    const toolResult = toolRegistry[action.tool](stored.id, action.parameters);
-    return Response.json({ ...result, result: toolResult }, { status: 201 });
+    const execution = await executeMockedTool(
+      stored.id, action.tool, action.parameters, getDatabase,
+    );
+    if (execution.kind === "invalid_parameters") {
+      return Response.json({
+        actionId: stored.id,
+        message: "Stored action parameters are invalid; the mocked tool was not run.",
+      }, { status: 500 });
+    }
+    return Response.json({ ...result, result: execution.result }, { status: 201 });
   } catch {
     return Response.json({
       actionId: stored.id,

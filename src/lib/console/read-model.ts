@@ -38,7 +38,9 @@ export async function getConsoleReadModel(prisma: PrismaClient): Promise<Console
           ? "No policy rule matched; reviewer approval is required."
           : action.policyRuleMatched === "unsupported_tool"
             ? "The submitted tool is not registered and is blocked."
-            : "No description available"),
+            : action.policyRuleMatched === "invalid_parameters"
+              ? "The parameters do not match the tool requirements, so the action is blocked."
+              : "No description available"),
       parameters: action.parameters,
     })),
     counts: Object.fromEntries(counts.map((entry) => [entry.status, entry._count._all])),

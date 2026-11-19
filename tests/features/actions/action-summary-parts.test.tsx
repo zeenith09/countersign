@@ -60,7 +60,7 @@ describe("action summary parts", () => {
     ["javascript:alert(1)", "recordId"],
   ])("keeps malformed identifier %s as plain text", (value, field) => {
     const parameters = field === "orderId"
-      ? { amount: 5000, currency: "USD", orderId: value }
+      ? { amount: 5000, orderId: value }
       : { recordId: value };
     const html = renderSummary(field === "orderId" ? "issue_refund" : "delete_record", parameters);
     expect(html).toContain(value);
@@ -69,7 +69,7 @@ describe("action summary parts", () => {
 
   it("keeps malformed or incomplete tool parameters in a plain-text fallback", () => {
     expect(summarizeAction("issue_refund", null)).toContain("parameters are not an object");
-    expect(summarizeAction("issue_refund", { amount: Infinity, currency: "USD", orderId: "ORDER-1" }))
+    expect(summarizeAction("issue_refund", { amount: Infinity, orderId: "ORDER-1" }))
       .toContain("refund parameters are incomplete or invalid");
     expect(summarizeAction("delete_record", {})).toContain("record ID is missing or invalid");
     expect(summarizeAction("send_email", { to: "", subject: "Review" }))
@@ -78,7 +78,7 @@ describe("action summary parts", () => {
   });
 
   it("falls back to a text summary for malformed refund parts and array payloads", () => {
-    const malformedRefund = { amount: "750", currency: "USD", orderId: "ORDER-1005" };
+    const malformedRefund = { amount: "750", orderId: "ORDER-1005" };
 
     expect(summarizeActionParts("issue_refund", malformedRefund)).toEqual([
       { type: "text", value: summarizeAction("issue_refund", malformedRefund) },

@@ -113,6 +113,7 @@ describe("QueueList selection", () => {
   it.each([
     ["no_rule_match", "No policy rule matched; reviewer approval is required."],
     ["unsupported_tool", "The submitted tool is not registered and is blocked."],
+    ["invalid_parameters", "The parameters do not match the tool requirements, so the action is blocked."],
   ])("shows the built-in description for %s", (ruleId, description) => {
     const action = {
       ...actions[0],

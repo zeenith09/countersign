@@ -26,7 +26,7 @@ describe("action summary", () => {
     const action = {
       id: "c076fb00-26d9-4dfd-9f31-000000000001",
       tool: "issue_refund",
-      parameters: { amount: 500, currency: "USD", orderId: hostileText },
+      parameters: { amount: 500, orderId: hostileText },
       summary: hostileText,
       summaryParts: [{ type: "text" as const, value: hostileText }],
       agentReasoning: hostileText,

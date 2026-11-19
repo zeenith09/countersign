@@ -18,7 +18,7 @@ const snapshot: ConsoleSnapshot = {
     risk: "Risk not assessed",
     rule: "refund-over-500",
     ruleDescription: "Refunds over $500 require reviewer approval.",
-    parameters: { orderId: "ORDER-1005", amount: 750, currency: "USD" },
+    parameters: { orderId: "ORDER-1005", amount: 750 },
   }],
   counts: { pending: 1, approved: 0, denied: 0, auto_allowed: 0, blocked: 0 },
   activity: [],

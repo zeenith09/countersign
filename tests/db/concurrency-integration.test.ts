@@ -115,11 +115,100 @@ describe.skipIf(readEnv("RUN_DB_SPIKE") !== "1" && readEnv("RUN_CONCURRENCY_DB_T
       id: randomUUID(),
       agentId: "concurrency-test",
       tool: "issue_refund",
-      parameters: { amount: 750, currency: "USD", orderId: "test-order" },
+      parameters: { amount: 750, orderId: "ORDER-1" },
       agentReasoning: "test",
       status: "pending",
     } });
   }
+
+  it("stores and audits invalid tool parameters as blocked without executing a tool", async () => {
+    const tools = (Object.keys(toolRegistry) as (keyof typeof toolRegistry)[])
+      .map((tool) => vi.spyOn(toolRegistry, tool));
+    const parameters = {
+      amount: 500,
+      orderId: "ORDER-1",
+      unexpected: "preserved",
+    };
+    const response = await handleActionSubmission(new Request("http://localhost/api/actions", {
+      method: "POST",
+      body: JSON.stringify({
+        agentId: "test",
+        agentReasoning: "test",
+        tool: "issue_refund",
+        parameters,
+      }),
+    }), () => client);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      outcome: "block",
+      ruleId: "invalid_parameters",
+      status: "blocked",
+    });
+    const stored = await client.action.findUniqueOrThrow({ where: { id: body.actionId } });
+    expect(stored).toMatchObject({
+      tool: "issue_refund",
+      parameters,
+      status: "blocked",
+      policyRuleMatched: "invalid_parameters",
+    });
+    const entries = await client.auditLog.findMany({ orderBy: { sequence: "asc" } });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      eventType: "action_submitted",
+      payload: {
+        action_id: body.actionId,
+        parameters,
+        outcome: "block",
+        policy_rule_matched: "invalid_parameters",
+      },
+    });
+    expect(verifyChain(entries)).toEqual({ ok: true });
+    for (const tool of tools) expect(tool).not.toHaveBeenCalled();
+  }, testTimeout);
+
+  it("audits and blocks execution after stored parameters are mutated invalid", async () => {
+    const action = await client.action.create({ data: {
+      id: randomUUID(),
+      agentId: "concurrency-test",
+      tool: "issue_refund",
+      parameters: { amount: 500, orderId: "ORDER-1" },
+      agentReasoning: "test",
+      status: "pending",
+    } });
+    await client.action.update({
+      where: { id: action.id },
+      data: { parameters: { amount: 500, orderId: "order-1" } },
+    });
+    const tools = (Object.keys(toolRegistry) as (keyof typeof toolRegistry)[])
+      .map((tool) => vi.spyOn(toolRegistry, tool));
+
+    const response = await decideRoute(decisionRequest(), {
+      params: Promise.resolve({ id: action.id }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      actionId: action.id,
+      message: "Approved action parameters are invalid; tool was not run.",
+    });
+    expect((await client.action.findUniqueOrThrow({ where: { id: action.id } })).status)
+      .toBe("approved");
+    expect(await client.decision.count()).toBe(1);
+    const entries = await client.auditLog.findMany({ orderBy: { sequence: "asc" } });
+    expect(entries.map((entry) => entry.eventType)).toEqual([
+      "action_decided",
+      "tool_execution_rejected",
+    ]);
+    expect(entries[1].payload).toMatchObject({
+      action_id: action.id,
+      tool: "issue_refund",
+      reason: "invalid_parameters",
+    });
+    expect(verifyChain(entries)).toEqual({ ok: true });
+    for (const tool of tools) expect(tool).not.toHaveBeenCalled();
+  }, testTimeout);
 
   it("correlates two action decisions when their responses finish in reverse order", async () => {
     const first = await createPendingAction();

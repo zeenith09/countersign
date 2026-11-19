@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { z } from "zod";
 
@@ -9,9 +8,8 @@ async function submitPendingAction(request: APIRequestContext): Promise<string> 
       agentReasoning: "Browser test submission for the human review flow.",
       tool: "issue_refund",
       parameters: {
-        orderId: `ORDER-${randomUUID().replaceAll("-", "").slice(0, 12)}`,
+        orderId: `ORDER-${Date.now()}`,
         amount: 750,
-        currency: "USD",
       },
     },
   });

@@ -31,16 +31,15 @@ export function summarizeActionParts(tool: string, parameters: Prisma.JsonValue)
   }
 
   if (tool === "issue_refund") {
-    const { amount, currency, orderId } = parameters;
+    const { amount, orderId } = parameters;
     if (typeof amount !== "number" || !Number.isFinite(amount) ||
-        typeof currency !== "string" || !/^[A-Za-z]{3}$/.test(currency) ||
         typeof orderId !== "string" || !orderId) {
       return [{ type: "text", value: summarizeAction(tool, parameters) }];
     }
 
     const formattedAmount = new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency,
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
     const identifierPart: SummaryPart = isOrderId(orderId)
@@ -77,16 +76,15 @@ export function summarizeAction(tool: string, parameters: Prisma.JsonValue): str
   }
 
   if (tool === "issue_refund") {
-    const { amount, currency, orderId } = parameters;
+    const { amount, orderId } = parameters;
     if (typeof amount !== "number" || !Number.isFinite(amount) ||
-        typeof currency !== "string" || !/^[A-Za-z]{3}$/.test(currency) ||
         typeof orderId !== "string" || !orderId) {
       return "Summary unavailable: refund parameters are incomplete or invalid.";
     }
 
     const formattedAmount = new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency,
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
     return `The agent wants to refund ${formattedAmount} for order ${orderId}.`;

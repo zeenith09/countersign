@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { decideAction } from "../../../../../lib/actions/decide-action";
+import { executeMockedTool } from "../../../../../lib/actions/execute-mocked-tool";
 import { toolRegistry } from "../../../../../lib/tools";
+import { isAllowedOrigin } from "../../../../../lib/config/env.mjs";
 import {
-  actionParametersSchema,
+  HttpError,
+  MAX_REQUEST_BODY_BYTES,
+  readJsonLimited,
+} from "../../../../../lib/http/read-json-limited";
+import {
   MAX_AGENT_REASONING_LENGTH,
 } from "../../../../../lib/tools/parameters";
 
@@ -12,22 +18,30 @@ const bodySchema = z.object({
   reviewer: z.string().trim().min(1).max(100),
   outcome: z.enum(["approved", "denied"]),
   reason: z.string().trim().min(1).max(MAX_AGENT_REASONING_LENGTH),
-  editedParameters: actionParametersSchema.optional(),
-}).refine((body) => body.outcome === "approved" || body.editedParameters === undefined);
+});
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  if (!isAllowedOrigin(request.headers.get("origin"))) {
+    return Response.json({ message: "Cross-origin requests are not allowed." }, { status: 403 });
+  }
+
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) {
     return Response.json({ message: "Invalid decision." }, { status: 400 });
   }
   let body: unknown;
   try {
-    body = await request.json();
+    body = await readJsonLimited(request, MAX_REQUEST_BODY_BYTES);
   } catch (error) {
-    if (error instanceof SyntaxError) {
-      return Response.json({ message: "Invalid decision." }, { status: 400 });
-    }
+    if (error instanceof HttpError) return Response.json({ message: error.message }, { status: error.status });
     throw error;
+  }
+  if (
+    typeof body === "object"
+    && body !== null
+    && Object.prototype.hasOwnProperty.call(body, "editedParameters")
+  ) {
+    return Response.json({ message: "editedParameters is not supported." }, { status: 400 });
   }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
@@ -38,10 +52,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }, { status: 400 });
   }
 
-  const { reviewer, outcome, reason, editedParameters } = parsed.data;
-  const result = editedParameters === undefined
-    ? await decideAction(id, reviewer, outcome, reason)
-    : await decideAction(id, reviewer, outcome, reason, undefined, editedParameters);
+  const { reviewer, outcome, reason } = parsed.data;
+  const result = await decideAction(id, reviewer, outcome, reason);
   if (result.kind === "invalid_edit") return Response.json({ message: "Edited parameters are invalid for this action." }, { status: 400 });
   if (result.kind === "not_found") return Response.json({ message: "Action not found." }, { status: 404 });
   if (result.kind === "conflict") return Response.json({ message: "Action is no longer pending." }, { status: 409 });
@@ -50,8 +62,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!Object.prototype.hasOwnProperty.call(toolRegistry, result.tool)) {
       throw new Error("Approved action has an unsupported tool.");
     }
-    const tool = result.tool as keyof typeof toolRegistry;
-    toolRegistry[tool](id, result.parameters);
+    const execution = await executeMockedTool(id, result.tool, result.parameters);
+    if (execution.kind === "invalid_parameters") {
+      return Response.json({
+        actionId: id,
+        message: "Approved action parameters are invalid; tool was not run.",
+      }, { status: 500 });
+    }
   }
   return Response.json({
     actionId: id,
